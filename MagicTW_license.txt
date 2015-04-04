@@ -1,0 +1,3 @@
+I am not the creator nor the owner of teeworlds. The original license of teeworlds can be found in the file license.txt.
+
+The parts of code specific to MagicTW are free to use, share, adapt and distribute for any purpose, even commercially. Acknowledgement in your product is not mandatory.
