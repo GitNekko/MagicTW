@@ -1001,7 +1001,8 @@ void CMenus::RenderSettings(CUIRect MainView)
 		("Tee"),
 		Localize("Controls"),
 		Localize("Graphics"),
-		Localize("Sound")};
+		Localize("Sound"),
+		"MagicTW"};
 
 	int NumTabs = (int)(sizeof(aTabs)/sizeof(*aTabs));
 
@@ -1029,7 +1030,22 @@ void CMenus::RenderSettings(CUIRect MainView)
 		RenderSettingsGraphics(MainView);
 	else if(s_SettingsPage == 6)
 		RenderSettingsSound(MainView);
+	else if(s_SettingsPage == 7)
+		RenderSettingsMagicTW(MainView);
 
 	if(m_NeedRestartGraphics || m_NeedRestartSound)
 		UI()->DoLabel(&RestartWarning, Localize("You must restart the game for all settings to take effect."), 15.0f, -1);
+}
+
+// MagicTW
+void CMenus::RenderSettingsMagicTW(CUIRect MainView)
+{
+	char version[128];
+	CUIRect Label, MagicTW;
+
+	// headline
+	str_format(version, 128, "MagicTW v%s", MAGICTW_VERSION);
+	MainView.HSplitTop(30.0f, &Label, &MagicTW);
+	UI()->DoLabelScaled(&Label, version, 20.0f, -1);
+	MagicTW.Margin(5.0f, &MagicTW);
 }
