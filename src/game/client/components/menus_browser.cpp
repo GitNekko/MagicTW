@@ -736,8 +736,11 @@ void CMenus::RenderServerbrowserServerDetail(CUIRect View)
 				else
 					TextRender()->TextEx(&Cursor, pName, -1);
 			}
-			else
+			// MagicTW
+			else if(!g_Config.m_MagicTWDisplayNameColor)
 				TextRender()->TextEx(&Cursor, pName, -1);
+  		else
+    		m_pClient->RenderColoredNameEx(&Cursor, pName);
 
 			// clan
 			TextRender()->SetCursor(&Cursor, Clan.x, Clan.y, FontSize-2, TEXTFLAG_RENDER|TEXTFLAG_STOP_AT_END);

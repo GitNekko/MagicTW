@@ -40,9 +40,16 @@ void CNamePlates::RenderNameplate(
 				TextRender()->TextColor(1.0f, 0.5f, 0.5f, a);
 			else if(pPlayerInfo->m_Team == TEAM_BLUE)
 				TextRender()->TextColor(0.7f, 0.7f, 1.0f, a);
-		}
 
-		TextRender()->Text(0, Position.x-tw/2.0f, Position.y-FontSize-38.0f, FontSize, pName, -1);
+  		TextRender()->Text(0, Position.x-tw/2.0f, Position.y-FontSize-38.0f, FontSize, pName, -1);
+		}
+		else if(g_Config.m_MagicTWDisplayNameColor) // MagicTW
+		{
+		  m_pClient->RenderColoredName(Position.x, Position.y, FontSize, pName, true);
+		}
+		else
+  		TextRender()->Text(0, Position.x-tw/2.0f, Position.y-FontSize-38.0f, FontSize, pName, -1);
+
 
 		if(g_Config.m_Debug) // render client id when in debug aswell
 		{

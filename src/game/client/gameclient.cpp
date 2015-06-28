@@ -1141,3 +1141,169 @@ IGameClient *CreateGameClient()
 {
 	return &g_GameClient;
 }
+
+//-------------------------MagicTW methods--------------------------
+
+// Methods to render a player's name based on (x,y) coordinates or cursor
+void CGameClient::RenderColoredName(float& p_x, float& p_y, float const& p_fontSize, char const* p_name,
+  bool const& p_center)
+{
+	float progress=0.0f; // To keep current position
+	float offset = 0.0f; // To center the rendered name
+	if(p_center)
+	{
+	  offset = -GetRealTextWidth(p_name)/2.0f;
+	}
+	// Create buffer to handle players' name
+	char buffer[MAX_NAME_LENGTH];
+	buffer[0]='\0';
+  // Get player's name
+	char const* pChar=p_name;
+	char cChar=*pChar;
+	while(cChar!='\0')
+	{
+	  // Find character '\' followed by a digit
+		if(*pChar=='\\' && (*(pChar+1)>='0' && *(pChar+1)<='9' ) )
+		{
+		  // Display current content of the buffer, then empty it
+			TextRender()->Text(0, p_x+offset+progress, p_y, p_fontSize, buffer, -1);
+			progress+=TextRender()->TextWidth(0, p_fontSize, buffer, -1); // Update progress
+			buffer[0]='\0';
+			SetTextColor(*(pChar+1),1); // Change color
+			pChar+=2; // Update pointer
+		}
+		else // Not a special char
+		{
+		  // Add to the buffer
+			char s[2]={cChar,'\0'};
+			str_append(buffer,s,MAX_NAME_LENGTH);
+			pChar++;
+		}
+		cChar=*pChar;
+	}
+	// Display what remains in the buffer
+	TextRender()->Text(0, p_x+offset+progress, p_y, p_fontSize, buffer, -1);
+	// Reset the default color (white)
+	TextRender()->TextColor(1.0f, 1.0f, 1.0f, 1);
+}
+
+void CGameClient::RenderColoredNameEx(CTextCursor* p_cursor, char const* p_name)
+{
+	// Create buffer to handle players' name
+	char buffer[MAX_NAME_LENGTH];
+	buffer[0]='\0'; // Empty buffer
+	// Get player's name
+	char const* pChar=p_name;
+	char cChar=*pChar;
+	while(cChar!='\0')
+	{
+	  // Find character '\' followed by a digit
+		if(*pChar=='\\' && (*(pChar+1)>='0' && *(pChar+1)<='9') )
+		{
+		  // Display current content of the buffer, then empty it
+			TextRender()->TextEx(p_cursor, buffer, -1);
+			buffer[0]='\0';
+			// Change color
+			SetTextColor(*(pChar+1),1);
+			// Update current pointer
+			pChar+=2;
+		}
+		else // Not a special char
+		{
+		  // Add to the buffer
+			char s[2]={cChar,'\0'};
+			str_append(buffer,s,MAX_NAME_LENGTH);
+			pChar++;
+		}
+		cChar=*pChar;
+	}
+	// Display what remains in the buffer
+	TextRender()->TextEx(p_cursor, buffer, -1);
+	// Reset the default color (white)
+	TextRender()->TextColor(1.0f, 1.0f, 1.0f, 1);
+}
+
+// Compute the real length of the name to be rendered (MagicTW color codes are not counted in the length)
+float CGameClient::GetRealTextWidth(const char *pName, int fontSizeOption)
+{
+	float FontSize;
+	if(fontSizeOption==0)
+		FontSize = 18.0f + 20.0f * g_Config.m_ClNameplatesSize / 100.0f;
+	else
+		FontSize = 36.0f;
+
+	int l=str_length(pName)+1;
+	char *pNvChaine=(char*)malloc(l*sizeof(char));
+	str_copy(pNvChaine,pName,l);
+
+	char *pChar=pNvChaine;
+	char *pCopyChar=pChar;
+
+	//printf("\ntest pour %s \n",pName);
+	do
+	{
+		//printf("pChar : %c - pCopyChar : %c\n",*pChar, *pCopyChar);
+		if(*pCopyChar=='\\') // On cherche le caractère '\'
+		{
+			if(*(pCopyChar+1)>='0' && *(pCopyChar+1)<='9') // S'il n'est pas suivi d'un chiffre
+			{
+				pCopyChar+=2;
+				//printf("+2\n");
+			}
+		}
+
+		*pChar=*pCopyChar;
+		pChar++;
+		pCopyChar++;
+	}while(*pCopyChar!='\0');
+	*pChar='\0';
+	//printf("résultat : %s \n",pNvChaine);
+	float realTextWidth = TextRender()->TextWidth(0, FontSize, pNvChaine, -1);
+	free(pNvChaine);
+
+	return realTextWidth;
+}
+
+// Method to change the current text color
+bool CGameClient::SetTextColor(const char c, float a)
+{
+	bool colorFound=true;			
+	switch(c)
+	{
+		case '0':
+			TextRender()->TextColor(1.0f, 1.0f, 1.0f, a);
+			break;
+		case '1':
+			TextRender()->TextColor(0.0f, 0.0f, 0.0f, a);
+			break;
+		case '2':
+			TextRender()->TextColor(1.0f, 0.0f, 0.0f, a);
+			break;
+		case '3':
+			TextRender()->TextColor(0.0f, 0.0f, 1.0f, a);
+			break;
+		case '4':
+			TextRender()->TextColor(0.0f, 1.0f, 0.0f, a);
+			break;
+		case '5':
+			TextRender()->TextColor(1.0f, 1.0f, 0.1f, a);
+			break;
+		case '6':
+			TextRender()->TextColor(0.5f, 0.0f, 0.5f, a);
+			break;
+		case '7':
+			TextRender()->TextColor(0.6f, 0.4f, 0.3f, a);
+			break;
+		case '8':
+			TextRender()->TextColor(1.0f, 0.6f, 0.2f, a);
+			break;
+		case '9':
+			TextRender()->TextColor(1.0f, 0.6f, 0.6f, a);
+			break;
+		default:
+			colorFound=false;
+			break;
+	}
+	return colorFound;
+}
+

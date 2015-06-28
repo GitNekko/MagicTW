@@ -508,20 +508,28 @@ void CChat::OnRender()
 		Cursor.m_LineWidth = LineWidth;
 
 		// render name
-		if(m_aLines[r].m_ClientID == -1)
-			TextRender()->TextColor(1.0f, 1.0f, 0.5f, Blend); // system
-		else if(m_aLines[r].m_Team)
-			TextRender()->TextColor(0.45f, 0.9f, 0.45f, Blend); // team message
-		else if(m_aLines[r].m_NameColor == TEAM_RED)
-			TextRender()->TextColor(1.0f, 0.5f, 0.5f, Blend); // red
-		else if(m_aLines[r].m_NameColor == TEAM_BLUE)
-			TextRender()->TextColor(0.7f, 0.7f, 1.0f, Blend); // blue
-		else if(m_aLines[r].m_NameColor == TEAM_SPECTATORS)
-			TextRender()->TextColor(0.75f, 0.5f, 0.75f, Blend); // spectator
-		else
-			TextRender()->TextColor(0.8f, 0.8f, 0.8f, Blend);
+		// MagicTW
+		if(!g_Config.m_MagicTWDisplayNameColor)
+		{
+		  if(m_aLines[r].m_ClientID == -1)
+			  TextRender()->TextColor(1.0f, 1.0f, 0.5f, Blend); // system
+		  else if(m_aLines[r].m_Team)
+			  TextRender()->TextColor(0.45f, 0.9f, 0.45f, Blend); // team message
+		  else if(m_aLines[r].m_NameColor == TEAM_RED)
+			  TextRender()->TextColor(1.0f, 0.5f, 0.5f, Blend); // red
+		  else if(m_aLines[r].m_NameColor == TEAM_BLUE)
+			  TextRender()->TextColor(0.7f, 0.7f, 1.0f, Blend); // blue
+		  else if(m_aLines[r].m_NameColor == TEAM_SPECTATORS)
+			  TextRender()->TextColor(0.75f, 0.5f, 0.75f, Blend); // spectator
+		  else
+			  TextRender()->TextColor(0.8f, 0.8f, 0.8f, Blend);
 
-		TextRender()->TextEx(&Cursor, m_aLines[r].m_aName, -1);
+		  TextRender()->TextEx(&Cursor, m_aLines[r].m_aName, -1);
+	  }
+	  else
+	  {
+  		m_pClient->RenderColoredNameEx(&Cursor, m_aLines[r].m_aName);
+	  }
 
 		// render line
 		if(m_aLines[r].m_ClientID == -1)

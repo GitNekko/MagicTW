@@ -1002,7 +1002,7 @@ void CMenus::RenderSettings(CUIRect MainView)
 		Localize("Controls"),
 		Localize("Graphics"),
 		Localize("Sound"),
-		"MagicTW"};
+		"MagicTW"}; // MagicTW
 
 	int NumTabs = (int)(sizeof(aTabs)/sizeof(*aTabs));
 
@@ -1031,7 +1031,7 @@ void CMenus::RenderSettings(CUIRect MainView)
 	else if(s_SettingsPage == 6)
 		RenderSettingsSound(MainView);
 	else if(s_SettingsPage == 7)
-		RenderSettingsMagicTW(MainView);
+		RenderSettingsMagicTW(MainView); // MagicTW
 
 	if(m_NeedRestartGraphics || m_NeedRestartSound)
 		UI()->DoLabel(&RestartWarning, Localize("You must restart the game for all settings to take effect."), 15.0f, -1);
@@ -1041,11 +1041,20 @@ void CMenus::RenderSettings(CUIRect MainView)
 void CMenus::RenderSettingsMagicTW(CUIRect MainView)
 {
 	char version[128];
-	CUIRect Label, MagicTW;
+	CUIRect Label, Button, MagicTW;
 
-	// headline
+	// Headline - Print current MagicTW version
 	str_format(version, 128, "MagicTW v%s", MAGICTW_VERSION);
 	MainView.HSplitTop(30.0f, &Label, &MagicTW);
 	UI()->DoLabelScaled(&Label, version, 20.0f, -1);
 	MagicTW.Margin(5.0f, &MagicTW);
+
+	// Display name colors
+	static int s_DisplayNameColor = g_Config.m_MagicTWDisplayNameColor;
+	MagicTW.HSplitTop(30.0f, &Button, &MagicTW);
+	if(DoButton_CheckBox(&s_DisplayNameColor, "Display colors in players' name",
+	  g_Config.m_MagicTWDisplayNameColor, &Button))
+  {
+	  g_Config.m_MagicTWDisplayNameColor ^= 1;
+  }
 }
