@@ -270,6 +270,7 @@ class CMenus : public CComponent
 	void RenderSettingsControls(CUIRect MainView);
 	void RenderSettingsGraphics(CUIRect MainView);
 	void RenderSettingsSound(CUIRect MainView);
+	void RenderSettingsMagicTW(CUIRect MainView); // MagicTW
 	void RenderSettings(CUIRect MainView);
 
 	void SetActive(bool Active);

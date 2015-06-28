@@ -10,6 +10,9 @@
 #include <game/gamecore.h>
 #include "render.h"
 
+// MagicTW
+#define MAGICTW_VERSION "1.8"
+
 class CGameClient : public IGameClient
 {
 	class CStack
