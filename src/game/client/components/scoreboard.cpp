@@ -264,7 +264,11 @@ void CScoreboard::RenderScoreboard(float x, float y, float w, int Team, const ch
 		// name
 		TextRender()->SetCursor(&Cursor, NameOffset, y+Spacing, FontSize, TEXTFLAG_RENDER|TEXTFLAG_STOP_AT_END);
 		Cursor.m_LineWidth = NameLength;
-		TextRender()->TextEx(&Cursor, m_pClient->m_aClients[pInfo->m_ClientID].m_aName, -1);
+		// MagicTW
+		if(!g_Config.m_MagicTWDisplayNameColor)
+  		TextRender()->TextEx(&Cursor, m_pClient->m_aClients[pInfo->m_ClientID].m_aName, -1);
+		else
+  		m_pClient->RenderColoredNameEx(&Cursor, m_pClient->m_aClients[pInfo->m_ClientID].m_aName);
 
 		// clan
 		tw = TextRender()->TextWidth(0, FontSize, m_pClient->m_aClients[pInfo->m_ClientID].m_aClan, -1);

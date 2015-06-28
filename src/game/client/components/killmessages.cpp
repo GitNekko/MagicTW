@@ -9,6 +9,9 @@
 #include <game/client/animstate.h>
 #include "killmessages.h"
 
+// MagicTW includes
+#include <engine/shared/config.h>
+
 void CKillMessages::OnReset()
 {
 	m_KillmsgCurrent = 0;
@@ -58,14 +61,20 @@ void CKillMessages::OnRender()
 			continue;
 
 		float FontSize = 36.0f;
-		float KillerNameW = TextRender()->TextWidth(0, FontSize, m_aKillmsgs[r].m_aKillerName, -1);
-		float VictimNameW = TextRender()->TextWidth(0, FontSize, m_aKillmsgs[r].m_aVictimName, -1);
-
 		float x = StartX;
 
 		// render victim name
-		x -= VictimNameW;
-		TextRender()->Text(0, x, y, FontSize, m_aKillmsgs[r].m_aVictimName, -1);
+		// MagicTW
+		if(!g_Config.m_MagicTWDisplayNameColor)
+		{
+		  x -= TextRender()->TextWidth(0, FontSize, m_aKillmsgs[r].m_aVictimName, -1);
+  		TextRender()->Text(0, x, y, FontSize, m_aKillmsgs[r].m_aVictimName, -1);
+		}
+		else
+		{
+			x -= m_pClient->GetRealTextWidth(m_aKillmsgs[r].m_aVictimName,1);
+			m_pClient->RenderColoredName(x, y, FontSize, m_aKillmsgs[r].m_aVictimName, false);
+		}
 
 		// render victim tee
 		x -= 24.0f;
@@ -133,8 +142,17 @@ void CKillMessages::OnRender()
 			x -= 32.0f;
 
 			// render killer name
-			x -= KillerNameW;
-			TextRender()->Text(0, x, y, FontSize, m_aKillmsgs[r].m_aKillerName, -1);
+			// MagicTW
+			if(!g_Config.m_MagicTWDisplayNameColor)
+			{
+			  x -= TextRender()->TextWidth(0, FontSize, m_aKillmsgs[r].m_aKillerName, -1);
+			  TextRender()->Text(0, x, y, FontSize, m_aKillmsgs[r].m_aKillerName, -1);
+		  }
+		  else
+			{
+				x -= m_pClient->GetRealTextWidth(m_aKillmsgs[r].m_aKillerName,1);
+			  m_pClient->RenderColoredName(x, y, FontSize, m_aKillmsgs[r].m_aKillerName, false);
+		  }
 		}
 
 		y += 46.0f;

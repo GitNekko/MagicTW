@@ -13,6 +13,8 @@
 // MagicTW
 #define MAGICTW_VERSION "1.8"
 
+class CTextCursor; // MagicTW
+
 class CGameClient : public IGameClient
 {
 	class CStack
@@ -64,7 +66,11 @@ class CGameClient : public IGameClient
 	static void ConTeam(IConsole::IResult *pResult, void *pUserData);
 	static void ConKill(IConsole::IResult *pResult, void *pUserData);
 
+	// MagicTW methods
+	static void ConDisplayNameColor(IConsole::IResult *pResult, void *pUserData);
+	
 	static void ConchainSpecialInfoupdate(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
+
 
 public:
 	IKernel *Kernel() { return IInterface::Kernel(); }
@@ -94,6 +100,13 @@ public:
 	bool m_NewPredictedTick;
 	int m_FlagDropTick[2];
 
+	// MagicTW public methods
+	float GetRealTextWidth(const char *pName, int fontSizeOption=0);
+	bool SetTextColor(const char c,float a);
+  void RenderColoredName(float& p_x, float& p_y, float const& p_fontSize,
+    char const* p_victimName, bool const& p_center);
+  void RenderColoredNameEx(CTextCursor* p_cursor, char const* p_victimName);
+	
 	// TODO: move this
 	CTuningParams m_Tuning;
 
