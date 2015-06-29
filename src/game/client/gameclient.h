@@ -67,8 +67,16 @@ class CGameClient : public IGameClient
 	static void ConKill(IConsole::IResult *pResult, void *pUserData);
 
 	// MagicTW methods
+	static void ConSendInfo(IConsole::IResult *pResult, void *pUserData);
+	static void ConSaveSkin(IConsole::IResult *pResult, void *pUserData);
+	static void ConCloneSkin(IConsole::IResult *pResult, void *pUserData);
+	static void ConCloneSkinNearest(IConsole::IResult *pResult, void *pUserData);
 	static void ConDisplayNameColor(IConsole::IResult *pResult, void *pUserData);
-	
+	void SendMsgPerso(CNetMsg_Cl_ChangeInfo *Msg);
+	void CloneSkinNearest();
+	int GetNearestId();
+
+
 	static void ConchainSpecialInfoupdate(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
 
 
@@ -100,13 +108,18 @@ public:
 	bool m_NewPredictedTick;
 	int m_FlagDropTick[2];
 
+	// MagicTW attributes
+	bool m_clone_skin_hammer_updated;
+	int m_last_hammer_x;
+	int m_last_hammer_y;
+
 	// MagicTW public methods
 	float GetRealTextWidth(const char *pName, int fontSizeOption=0);
 	bool SetTextColor(const char c,float a);
   void RenderColoredName(float& p_x, float& p_y, float const& p_fontSize,
     char const* p_victimName, bool const& p_center);
   void RenderColoredNameEx(CTextCursor* p_cursor, char const* p_victimName);
-	
+
 	// TODO: move this
 	CTuningParams m_Tuning;
 

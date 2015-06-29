@@ -58,6 +58,8 @@ MACRO_CONFIG_INT(GfxNoclip, gfx_noclip, 0, 0, 1, CFGFLAG_CLIENT|CFGFLAG_SAVE, "D
 //MagicTW
 MACRO_CONFIG_INT(MagicTWDisplayNameColor, MagicTW_display_name_color, 0, 0, 1,
 	CFGFLAG_CLIENT|CFGFLAG_SAVE, "Enable/disable colors in players'name")
+MACRO_CONFIG_INT(MagicTWCloneSkinHammer, MagicTW_clone_skin_hammer, 0, 0, 1,
+	CFGFLAG_CLIENT|CFGFLAG_SAVE, "Copy the skin of the player you hit")
 
 // server
 MACRO_CONFIG_INT(SvWarmup, sv_warmup, 0, 0, 0, CFGFLAG_SERVER, "Number of seconds to do warmup before round starts")
