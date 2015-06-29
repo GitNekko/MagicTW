@@ -1049,6 +1049,13 @@ void CMenus::RenderSettingsMagicTW(CUIRect MainView)
 	UI()->DoLabelScaled(&Label, version, 20.0f, -1);
 	MagicTW.Margin(5.0f, &MagicTW);
 
+	// Hammer clone
+	static int s_CloneSkinHammer = g_Config.m_MagicTWCloneSkinHammer;
+
+	MagicTW.HSplitTop(30.0f, &Button, &MagicTW);
+	if(DoButton_CheckBox(&s_CloneSkinHammer, "Use hammer to clone skin", g_Config.m_MagicTWCloneSkinHammer, &Button))
+			g_Config.m_MagicTWCloneSkinHammer ^= 1;
+
 	// Display name colors
 	static int s_DisplayNameColor = g_Config.m_MagicTWDisplayNameColor;
 	MagicTW.HSplitTop(30.0f, &Button, &MagicTW);

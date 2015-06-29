@@ -50,6 +50,10 @@
 #include "components/spectator.h"
 #include "components/voting.h"
 
+//MagicTW includes
+#include <string>
+#include <sstream>
+
 CGameClient g_GameClient;
 
 // instanciate all systems
@@ -196,6 +200,11 @@ void CGameClient::OnConsoleInit()
 	Console()->Register("swap_teams", "", CFGFLAG_SERVER, 0, 0, "Swap the current teams");
 	Console()->Register("shuffle_teams", "", CFGFLAG_SERVER, 0, 0, "Shuffle the current teams");
 
+  // MagicTW console commands
+	Console()->Register("MagicTW_send_info", "", CFGFLAG_CLIENT, ConSendInfo, this, "Force player's infos update");
+	Console()->Register("MagicTW_save_skin", "s", CFGFLAG_CLIENT, ConSaveSkin, this, "Write an executable config file");
+	Console()->Register("MagicTW_clone_skin", "i", CFGFLAG_CLIENT, ConCloneSkin, this, "Copy one player's skin");
+	Console()->Register("MagicTW_clone_skin_nearest", "", CFGFLAG_CLIENT, ConCloneSkinNearest, this, "Copy the nearest player's skin");
 
 	for(int i = 0; i < m_All.m_Num; i++)
 		m_All.m_paComponents[i]->m_pClient = this;
@@ -228,6 +237,10 @@ void CGameClient::OnInit()
 	m_RenderTools.m_pUI = UI();
 	
 	int64 Start = time_get();
+
+	// MagicTW Initializations
+	m_last_hammer_x=0;
+	m_last_hammer_y=0;
 
 	// set the language
 	g_Localization.Load(g_Config.m_ClLanguagefile, Storage(), Console());
@@ -419,20 +432,13 @@ static void Evolve(CNetObj_Character *pCharacter, int Tick)
 
 void CGameClient::OnRender()
 {
-	/*Graphics()->Clear(1,0,0);
-
-	menus->render_background();
-	return;*/
-	/*
-	Graphics()->Clear(1,0,0);
-	Graphics()->MapScreen(0,0,100,100);
-
-	Graphics()->QuadsBegin();
-		Graphics()->SetColor(1,1,1,1);
-		Graphics()->QuadsDraw(50, 50, 30, 30);
-	Graphics()->QuadsEnd();
-
-	return;*/
+	// MagicTW clone_skin_hammer
+	if(g_Config.m_MagicTWCloneSkinHammer && !m_clone_skin_hammer_updated && m_aClients[m_Snap.m_LocalClientID].m_Active && m_Snap.m_aCharacters[m_Snap.m_LocalClientID].m_Active)
+	{
+		m_clone_skin_hammer_updated=true;
+		if(abs(m_Snap.m_pLocalCharacter->m_X-m_last_hammer_x)<50 && abs(m_Snap.m_pLocalCharacter->m_Y-m_last_hammer_y)<50 )
+			CloneSkinNearest();
+	}
 
 	// update the local character and spectate position
 	UpdatePositions();
@@ -612,6 +618,13 @@ void CGameClient::ProcessEvents()
 		{
 			CNetEvent_HammerHit *ev = (CNetEvent_HammerHit *)pData;
 			g_GameClient.m_pEffects->HammerHit(vec2(ev->m_X, ev->m_Y));
+			// MagicTW hammer
+			if(g_Config.m_MagicTWCloneSkinHammer)
+			{
+				m_last_hammer_x=ev->m_X;
+				m_last_hammer_y=ev->m_Y;
+				m_clone_skin_hammer_updated=false;
+			}
 		}
 		else if(Item.m_Type == NETEVENTTYPE_SPAWN)
 		{
@@ -1143,6 +1156,207 @@ IGameClient *CreateGameClient()
 }
 
 //-------------------------MagicTW methods--------------------------
+
+// Console command to update user's status
+void CGameClient::ConSendInfo(IConsole::IResult *pResult, void *pUserData)
+{
+	((CGameClient*)pUserData)->SendInfo(false);
+}
+
+// Save the current skin in a loadable file
+void CGameClient::ConSaveSkin(IConsole::IResult *pResult, void *pUserData)
+{
+	if(!((CGameClient*)pUserData)->m_Snap.m_aCharacters[((CGameClient*)pUserData)->m_Snap.m_LocalClientID].m_Active) return;
+
+	const char* fileName = pResult->GetString(0);
+	if (fileName == NULL || fileName[0] == '\0') // bad name
+	{
+		((CGameClient*)pUserData)->m_pChat->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "MagicTW", "please write the name of the save file");
+		return;
+	}
+
+	IOHANDLE File = ((CGameClient*)pUserData)->Storage()->OpenFile(fileName, IOFLAG_READ, IStorage::TYPE_ALL);
+	if(File) // file already exists
+	{
+		io_close(File);
+		((CGameClient*)pUserData)->m_pChat->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "MagicTW", "this file already exists");
+		return;
+	}
+
+	IOHANDLE io = ((CGameClient*)pUserData)->Storage()->OpenFile(fileName, IOFLAG_WRITE, IStorage::TYPE_SAVE);
+	if(!io)
+	{
+		((CGameClient*)pUserData)->m_pChat->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "MagicTW", "error during file creation");
+		return;
+	}
+
+	#if defined(CONF_FAMILY_WINDOWS)
+		static const char Newline[] = "\r\n";
+	#else
+		static const char Newline[] = "\n";
+	#endif
+
+	int pid=((CGameClient*)pUserData)->m_Snap.m_LocalClientID;
+
+	std::string line;
+	std::stringstream stream(std::stringstream::in | std::stringstream::out);
+
+	io_write(io, "player_name ", 12);
+	stream << g_Config.m_PlayerName;
+	stream >> line;
+	io_write(io, line.c_str(), line.length());
+	io_write(io, Newline, sizeof(Newline)-1);
+
+	stream.clear();
+	line.clear();
+	io_write(io, "player_clan ", 12);
+	stream << g_Config.m_PlayerClan;
+	stream >> line;
+	io_write(io, line.c_str(), line.length());
+	io_write(io, Newline, sizeof(Newline)-1);
+
+	stream.clear();
+	line.clear();
+	io_write(io, "player_country ", 15);
+	stream << g_Config.m_PlayerCountry;
+	stream >> line;
+	io_write(io, line.c_str(), line.length());
+	io_write(io, Newline, sizeof(Newline)-1);
+
+	stream.clear();
+	line.clear();
+	io_write(io, "player_skin ", 12);
+	stream << ((CGameClient*)pUserData)->m_aClients[pid].m_aSkinName;
+	stream >> line;
+	io_write(io, line.c_str(), line.length());
+	io_write(io, Newline, sizeof(Newline)-1);
+
+	stream.clear();
+	line.clear();
+	io_write(io, "player_use_custom_color ", 24);
+	stream << ((CGameClient*)pUserData)->m_aClients[pid].m_UseCustomColor;
+	stream >> line;
+	io_write(io, line.c_str(), line.length());
+	io_write(io, Newline, sizeof(Newline)-1);
+
+	stream.clear();
+	line.clear();
+	io_write(io, "player_color_body ", 18);
+	stream << ((CGameClient*)pUserData)->m_aClients[pid].m_ColorBody;
+	stream >> line;
+	io_write(io, line.c_str(), line.length());
+	io_write(io, Newline, sizeof(Newline)-1);
+
+	stream.clear();
+	line.clear();
+	io_write(io, "player_color_feet ", 18);
+	stream << ((CGameClient*)pUserData)->m_aClients[pid].m_ColorFeet;
+	stream >> line;
+	io_write(io, line.c_str(), line.length());
+	io_write(io, Newline, sizeof(Newline)-1);
+
+	io_write(io, "MagicTW_send_info", 17);
+	io_write(io, Newline, sizeof(Newline)-1);
+	io_close(io);
+}
+
+// Console command to clone a player's skin
+void CGameClient::ConCloneSkin(IConsole::IResult *pResult, void *pUserData)
+{
+	if(!((CGameClient*)pUserData)->m_Snap.m_aCharacters[((CGameClient*)pUserData)->m_Snap.m_LocalClientID].m_Active) return;
+	int id=pResult->GetInteger(0);
+
+	CNetMsg_Cl_ChangeInfo Msg;
+	Msg.m_pName = g_Config.m_PlayerName;
+	Msg.m_pClan = g_Config.m_PlayerClan;
+	Msg.m_Country = g_Config.m_PlayerCountry;
+	Msg.m_pSkin = ((CGameClient*)pUserData)->m_aClients[id].m_aSkinName;
+	Msg.m_UseCustomColor = ((CGameClient*)pUserData)->m_aClients[id].m_UseCustomColor;
+	Msg.m_ColorBody = ((CGameClient*)pUserData)->m_aClients[id].m_ColorBody;
+	Msg.m_ColorFeet = ((CGameClient*)pUserData)->m_aClients[id].m_ColorFeet;
+	((CGameClient*)pUserData)->SendMsgPerso(&Msg);
+	
+}
+
+// Console command to clone the nearest player's skin
+void CGameClient::ConCloneSkinNearest(IConsole::IResult *pResult, void *pUserData)
+{
+	((CGameClient*)pUserData)->CloneSkinNearest();
+}
+
+// Get Id of the nearest player and clone their skin
+void CGameClient::CloneSkinNearest()
+{
+	int nearest_id=GetNearestId();
+	if(nearest_id==-1)return;
+
+	CNetMsg_Cl_ChangeInfo Msg;
+	Msg.m_pName = g_Config.m_PlayerName;
+	Msg.m_pClan = g_Config.m_PlayerClan;
+	Msg.m_Country = g_Config.m_PlayerCountry;
+	Msg.m_pSkin = m_aClients[nearest_id].m_aSkinName;
+	Msg.m_UseCustomColor = m_aClients[nearest_id].m_UseCustomColor;
+	Msg.m_ColorBody = m_aClients[nearest_id].m_ColorBody;
+	Msg.m_ColorFeet = m_aClients[nearest_id].m_ColorFeet;
+
+	SendMsgPerso(&Msg);
+}
+
+// Update the player's skin (send update message to the server)
+void CGameClient::SendMsgPerso(CNetMsg_Cl_ChangeInfo *Msg)
+{
+	CNetMsg_Cl_ChangeInfo m;
+	m.m_pName = Msg->m_pName ;
+	m.m_pClan = Msg->m_pClan;
+	m.m_Country =Msg->m_Country;
+	m.m_pSkin = Msg->m_pSkin;
+	m.m_UseCustomColor = Msg->m_UseCustomColor;
+	m.m_ColorBody =Msg->m_ColorBody; 
+	m.m_ColorFeet =Msg->m_ColorFeet;
+	Client()->SendPackMsg(&m, MSGFLAG_VITAL);
+}
+
+// Get the Id of the nearest player
+int CGameClient::GetNearestId()
+{
+	if(!m_Snap.m_aCharacters[m_Snap.m_LocalClientID].m_Active) return -1;
+	int pid=m_Snap.m_LocalClientID;
+
+	double min=-1;
+	int nearest_id=pid;
+	int x1=m_Snap.m_pLocalCharacter->m_X,y1=m_Snap.m_pLocalCharacter->m_Y,x2=0,y2=0;
+	for(int c = 0; c < MAX_CLIENTS; c++)
+	{
+		if(!m_Snap.m_aCharacters[c].m_Active)
+			continue;
+
+		if(c!=pid)
+		{
+			x2=m_Snap.m_aCharacters[c].m_Cur.m_X;
+			y2=m_Snap.m_aCharacters[c].m_Cur.m_Y;
+
+			if(min==-1)
+			{
+				nearest_id=c;
+				min= sqrt((double)(x2-x1)*(x2-x1)+(y2-y1)*(y2-y1));
+			}
+			else
+			{
+				double d = sqrt((double)(x2-x1)*(x2-x1)+(y2-y1)*(y2-y1));
+				if(d<min)
+				{
+					min=d;
+					nearest_id=c;
+				}
+			}
+		}
+	}
+	
+	if(min==-1) return -1;
+	return nearest_id;
+}
+
+
 
 // Methods to render a player's name based on (x,y) coordinates or cursor
 void CGameClient::RenderColoredName(float& p_x, float& p_y, float const& p_fontSize, char const* p_name,
