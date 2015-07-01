@@ -19,6 +19,8 @@ class CLineInput
 	int m_NumChars;
 public:
 	static bool Manipulate(IInput::CEvent e, char *pStr, int StrMaxSize, int StrMaxChars, int *pStrLenPtr, int *pCursorPosPtr, int *pNumCharsPtr);
+  // MagicTW
+  static void GetUnicode(char *pString,const char *pSymbol);
 
 	class CCallback
 	{
@@ -35,6 +37,8 @@ public:
 	int GetLength() const { return m_Len; }
 	int GetCursorOffset() const { return m_CursorPos; }
 	void SetCursorOffset(int Offset) { m_CursorPos = Offset > m_Len ? m_Len : Offset < 0 ? 0 : Offset; }
+	// MagicTW
+	void AddString(const char *pString);
 };
 
 #endif

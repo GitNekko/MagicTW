@@ -69,6 +69,10 @@ class CChat : public CComponent
 	static void ConChat(IConsole::IResult *pResult, void *pUserData);
 	static void ConShowChat(IConsole::IResult *pResult, void *pUserData);
 
+	// MagicTW methods
+	static void ConVersion(IConsole::IResult *pResult, void *pUserData);
+	static void ConSpecialCharactersChat(IConsole::IResult *pResult, void *pUserData);
+
 public:
 	CChat();
 

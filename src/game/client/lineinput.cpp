@@ -3,6 +3,9 @@
 #include <engine/keys.h>
 #include "lineinput.h"
 
+// MagicTW - Debug
+#include <stdio.h>
+
 CLineInput::CLineInput()
 {
 	Clear();
@@ -106,3 +109,266 @@ void CLineInput::ProcessInput(IInput::CEvent e)
 {
 	Manipulate(e, m_Str, MAX_SIZE, MAX_CHARS, &m_Len, &m_CursorPos, &m_NumChars);
 }
+
+// MagicTW
+void CLineInput::AddString(const char *pString)
+{
+	char buf[MAX_SIZE];
+	str_copy(buf,m_Str+m_CursorPos,MAX_SIZE);
+	m_Str[m_CursorPos]='\0';
+	str_append(m_Str,pString,MAX_SIZE);
+	str_append(m_Str,buf,MAX_SIZE);
+	m_Len=str_length(m_Str);
+	// Reset cursor to the end
+	m_CursorPos = m_Len;
+	int offset = 0;
+	while(pString[offset])
+	{
+		offset = str_utf8_forward(pString, offset);
+		++m_NumChars;
+	}
+}
+
+void CLineInput::GetUnicode(char *pString,const char *pSymbol)
+{
+	pString[0]=(char)-30;
+
+	if(!str_comp_nocase(pSymbol,"heart"))
+	{
+		pString[1]=(char)-103;
+		pString[2]=(char)-91;
+		pString[3]='\0';
+	}
+	else if(!str_comp_nocase(pSymbol,"round_heart"))
+	{
+		pString[1]=(char)-99;
+		pString[2]=(char)-92;
+		pString[3]='\0';
+	}
+	else if(!str_comp_nocase(pSymbol,"empty_heart"))
+	{
+		pString[1]=(char)-103;
+		pString[2]=(char)-95;
+		pString[3]='\0';
+	}
+	else if(!str_comp_nocase(pSymbol,"star"))
+	{
+		pString[1]=(char)-104;
+		pString[2]=(char)-122;
+		pString[3]='\0';
+	}
+	else if(!str_comp_nocase(pSymbol,"3_stars"))
+	{
+		pString[1]=(char)-127;
+		pString[2]=(char)-126;
+		pString[3]='\0';
+	}
+	else if(!str_comp_nocase(pSymbol,"club"))
+	{
+		pString[1]=(char)-104;
+		pString[2]=(char)-104;
+		pString[3]='\0';
+	}
+	else if(!str_comp_nocase(pSymbol,"shakti"))
+	{
+		pString[1]=(char)-104;
+		pString[2]=(char)-84;
+		pString[3]='\0';
+	}
+	else if(!str_comp_nocase(pSymbol,"yin_yang"))
+	{
+		pString[1]=(char)-104;
+		pString[2]=(char)-81;
+		pString[3]='\0';
+	}
+	else if(!str_comp_nocase(pSymbol,"peace"))
+	{
+		pString[1]=(char)-104;
+		pString[2]=(char)-82;
+		pString[3]='\0';
+	}
+	else if(!str_comp_nocase(pSymbol,"skull"))
+	{
+		pString[1]=(char)-104;
+		pString[2]=(char)-96;
+		pString[3]='\0';
+	}
+	else if(!str_comp_nocase(pSymbol,"radioactive"))
+	{
+		pString[1]=(char)-104;
+		pString[2]=(char)-94;
+		pString[3]='\0';
+	}
+	else if(!str_comp_nocase(pSymbol,"biohazard"))
+	{
+		pString[1]=(char)-104;
+		pString[2]=(char)-93;
+		pString[3]='\0';
+	}
+	else if(!str_comp_nocase(pSymbol,"black_smile"))
+	{
+		pString[1]=(char)-104;
+		pString[2]=(char)-69;
+		pString[3]='\0';
+	}
+	else if(!str_comp_nocase(pSymbol,"white_smile"))
+	{
+		pString[1]=(char)-104;
+		pString[2]=(char)-70;
+		pString[3]='\0';
+	}
+	else if(!str_comp_nocase(pSymbol,"note"))
+	{
+		pString[1]=(char)-103;
+		pString[2]=(char)-85;
+		pString[3]='\0';
+	}
+	else if(!str_comp_nocase(pSymbol,"recycling"))
+	{
+		pString[1]=(char)-103;
+		pString[2]=(char)-78;
+		pString[3]='\0';
+	}
+	else if(!str_comp_nocase(pSymbol,"east_syriac_cross"))
+	{
+		pString[1]=(char)-103;
+		pString[2]=(char)-79;
+		pString[3]='\0';
+	}
+	else if(!str_comp_nocase(pSymbol,"west_syriac_cross"))
+	{
+		pString[1]=(char)-103;
+		pString[2]=(char)-80;
+		pString[3]='\0';
+	}
+	else if(!str_comp_nocase(pSymbol,"wheelchair"))
+	{
+		pString[1]=(char)-103;
+		pString[2]=(char)-65;
+		pString[3]='\0';
+	}
+	else if(!str_comp_nocase(pSymbol,"medicine"))
+	{
+		pString[1]=(char)-102;
+		pString[2]=(char)-107;
+		pString[3]='\0';
+	}
+	else if(!str_comp_nocase(pSymbol,"atom"))
+	{
+		pString[1]=(char)-102;
+		pString[2]=(char)-101;
+		pString[3]='\0';
+	}
+	else if(!str_comp_nocase(pSymbol,"high_voltage"))
+	{
+		pString[1]=(char)-102;
+		pString[2]=(char)-95;
+		pString[3]='\0';
+	}
+	else if(!str_comp_nocase(pSymbol,"scissors"))
+	{
+		pString[1]=(char)-100;
+		pString[2]=(char)-126;
+		pString[3]='\0';
+	}
+	else if(!str_comp_nocase(pSymbol,"telephone"))
+	{
+		pString[1]=(char)-100;
+		pString[2]=(char)-122;
+		pString[3]='\0';
+	}
+	else if(!str_comp_nocase(pSymbol,"airplane"))
+	{
+		pString[1]=(char)-100;
+		pString[2]=(char)-120;
+		pString[3]='\0';
+	}
+	else if(!str_comp_nocase(pSymbol,"pencil"))
+	{
+		pString[1]=(char)-100;
+		pString[2]=(char)-114;
+		pString[3]='\0';
+	}
+	else if(!str_comp_nocase(pSymbol,"8_pointed_star"))
+	{
+		pString[1]=(char)-100;
+		pString[2]=(char)-75;
+		pString[3]='\0';
+	}
+	else if(!str_comp_nocase(pSymbol,"circle_arrow"))
+	{
+		pString[1]=(char)-97;
+		pString[2]=(char)-77;
+		pString[3]='\0';
+	}
+	else if(!str_comp_nocase(pSymbol,"diamond"))
+	{
+		pString[1]=(char)-103;
+		pString[2]=(char)-90;
+		pString[3]='\0';
+	}
+	else if(!str_comp_nocase(pSymbol,"spade"))
+	{
+		pString[1]=(char)-103;
+		pString[2]=(char)-96;
+		pString[3]='\0';
+	}
+	else if(!str_comp_nocase(pSymbol,"right_arrow"))
+	{
+		pString[1]=(char)-98;
+		pString[2]=(char)-95;
+		pString[3]='\0';
+	}
+	else if(!str_comp_nocase(pSymbol,"up_arrow"))
+	{
+		pString[1]=(char)-84;
+		pString[2]=(char)-122;
+		pString[3]='\0';
+	}
+	else if(!str_comp_nocase(pSymbol,"left_arrow"))
+	{
+		pString[1]=(char)-84;
+		pString[2]=(char)-123;
+		pString[3]='\0';
+	}
+	else if(!str_comp_nocase(pSymbol,"down_arrow"))
+	{
+		pString[1]=(char)-84;
+		pString[2]=(char)-121;
+		pString[3]='\0';
+	}
+	else if(!str_comp_nocase(pSymbol,"up_right_arrow"))
+	{
+		pString[1]=(char)-84;
+		pString[2]=(char)-120;
+		pString[3]='\0';
+	}
+	else if(!str_comp_nocase(pSymbol,"up_left_arrow"))
+	{
+		pString[1]=(char)-84;
+		pString[2]=(char)-119;
+		pString[3]='\0';
+	}
+	else if(!str_comp_nocase(pSymbol,"down_left_arrow"))
+	{
+		pString[1]=(char)-84;
+		pString[2]=(char)-117;
+		pString[3]='\0';
+	}
+	else if(!str_comp_nocase(pSymbol,"down_right_arrow"))
+	{
+		pString[1]=(char)-84;
+		pString[2]=(char)-118;
+		pString[3]='\0';
+	}
+/*
+	else if(!str_comp_nocase(pSymbol,""))
+	{
+		pString[1]=(char)-;
+		pString[2]=(char)-;
+		pString[3]='\0';
+	}*/
+	else
+		pString[0]='\0';
+}
+

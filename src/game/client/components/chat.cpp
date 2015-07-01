@@ -96,6 +96,10 @@ void CChat::OnConsoleInit()
 	Console()->Register("say_team", "r", CFGFLAG_CLIENT, ConSayTeam, this, "Say in team chat");
 	Console()->Register("chat", "s", CFGFLAG_CLIENT, ConChat, this, "Enable chat with all/team mode");
 	Console()->Register("+show_chat", "", CFGFLAG_CLIENT, ConShowChat, this, "Show chat");
+
+	// MagicTW console commands
+	Console()->Register("MagicTW_version", "", CFGFLAG_CLIENT, ConVersion, this, "Display your MagicTW version");
+	Console()->Register("MagicTW_special_characters_chat", "s", CFGFLAG_CLIENT, ConSpecialCharactersChat, this, "Add special characters in the chat input field");
 }
 
 bool CChat::OnInput(IInput::CEvent Event)
@@ -135,6 +139,8 @@ bool CChat::OnInput(IInput::CEvent Event)
 		m_pHistoryEntry = 0x0;
 		m_Mode = MODE_NONE;
 		m_pClient->OnRelease();
+		// MagicTW
+		m_Input.Clear();
 	}
 	if(Event.m_Flags&IInput::FLAG_PRESS && Event.m_Key == KEY_TAB)
 	{
@@ -557,3 +563,42 @@ void CChat::Say(int Team, const char *pLine)
 	Msg.m_pMessage = pLine;
 	Client()->SendPackMsg(&Msg, MSGFLAG_VITAL);
 }
+
+// MagicTW fonctions
+
+void CChat::ConVersion(IConsole::IResult *pResult, void *pUserData)
+{
+	char buf[256]; // buffer pour la chaine
+	char unicode1[4],unicode2[4]; // buffers pour les caractères unicodes
+
+	buf[0]='\0';
+	CLineInput::GetUnicode(unicode1,"star");
+	CLineInput::GetUnicode(unicode2,"round_heart");
+
+	str_append(buf,unicode1,256); // Star
+	str_append(buf,"MagicTW v",256); // Text
+	str_append(buf,MAGICTW_VERSION,256); // Text (num. version)
+	str_append(buf,unicode1,256); // Star
+	str_append(buf," ",256); // Text
+	str_append(buf,unicode2,256); // Heart
+	str_append(buf," magictw.blogspot.com ",256); // Text
+	str_append(buf,unicode2,256); // Heart
+
+	// Display
+	((CChat*)pUserData)->Say(0, buf);
+}
+
+void CChat::ConSpecialCharactersChat(IConsole::IResult *pResult, void *pUserData)
+{
+	const char *pSymbol = pResult->GetString(0);
+
+	((CChat*)pUserData)->m_Mode=MODE_ALL;
+	char buf[10];
+	
+	int offset=((CChat*)pUserData)->m_Input.GetCursorOffset();
+	CLineInput::GetUnicode(buf,pSymbol);
+	((CChat*)pUserData)->m_Input.AddString(buf);
+	((CChat*)pUserData)->m_Input.SetCursorOffset(offset+3);
+	((CChat*)pUserData)->m_InputUpdate = true;
+}
+
