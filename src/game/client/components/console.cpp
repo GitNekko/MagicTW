@@ -107,8 +107,12 @@ void CGameConsole::CInstance::OnInput(IInput::CEvent Event)
 					char *pEntry = m_History.Allocate(m_Input.GetLength()+1);
 					mem_copy(pEntry, m_Input.GetString(), m_Input.GetLength()+1);
 				}
-				ExecuteLine(m_Input.GetString());
+				// MagicTW
+				char buf[512];
+				str_copy(buf,m_Input.GetString(),512);
 				m_Input.Clear();
+
+				ExecuteLine(buf);
 				m_pHistoryEntry = 0x0;
 			}
 
@@ -495,6 +499,28 @@ void CGameConsole::OnRender()
 		{
 			while(pEntry)
 			{
+				// MagicTW couleurs dans le log
+				char s1[10],s2[10],unicode[4];
+				CLineInput::GetUnicode(unicode,"high_voltage");
+				s1[0]='\0';
+				s2[0]='\0';
+
+				str_append(s1,unicode,10);
+				str_append(s1,"OFF",10);
+				str_append(s1,unicode,10);
+				str_append(s2,unicode,10);
+				str_append(s2,"ON",10);
+				str_append(s2,unicode,10);
+
+				TextRender()->TextColor(1,1,1,1); // white 
+				if(strstr(pEntry->m_aText,"[Console]: MagicTW_")==pEntry->m_aText)
+				{
+					if(strstr(pEntry->m_aText,s1)!=0)
+						TextRender()->TextColor(1,0,0,1); // red
+					else if(strstr(pEntry->m_aText,s2)!=0)
+						TextRender()->TextColor(0,1,0,1); // green
+				}
+
 				// get y offset (calculate it if we haven't yet)
 				if(pEntry->m_YOffset < 0.0f)
 				{
@@ -698,6 +724,9 @@ void CGameConsole::OnConsoleInit()
 	Console()->Register("dump_local_console", "", CFGFLAG_CLIENT, ConDumpLocalConsole, this, "Dump local console");
 	Console()->Register("dump_remote_console", "", CFGFLAG_CLIENT, ConDumpRemoteConsole, this, "Dump remote console");
 
+	// MagicTW console commands
+	Console()->Register("MagicTW_special_characters_console", "s", CFGFLAG_CLIENT, ConSpecialCharactersConsole, this, "Add special characters in the console input field");
+
 	Console()->Chain("console_output_level", ConchainConsoleOutputLevelUpdate, this);
 }
 
@@ -705,4 +734,16 @@ void CGameConsole::OnStateChange(int NewState, int OldState)
 {
 	if(NewState == IClient::STATE_OFFLINE)
 		m_RemoteConsole.ClearHistory();
+}
+
+// MagicTW methods
+void CGameConsole::ConSpecialCharactersConsole(IConsole::IResult *pResult, void *pUserData)
+{
+  // Get symbol name
+	const char *pSymbol = pResult->GetString(0);
+	char buf[10];
+	// Get symbol corresponding unicode
+	CLineInput::GetUnicode(buf,pSymbol);
+	// Add symbol to the console line input
+	((CGameConsole *)pUserData)->m_LocalConsole.m_Input.AddString(buf);
 }

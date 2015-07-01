@@ -80,6 +80,9 @@ class CGameConsole : public CComponent
 	static void ConDumpRemoteConsole(IConsole::IResult *pResult, void *pUserData);
 	static void ConchainConsoleOutputLevelUpdate(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
 
+	// MagicTW methods
+	static void ConSpecialCharactersConsole(IConsole::IResult *pResult, void *pUserData);
+
 public:
 	enum
 	{
