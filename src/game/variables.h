@@ -61,6 +61,11 @@ MACRO_CONFIG_INT(MagicTWDisplayNameColor, MagicTW_display_name_color, 0, 0, 1,
 MACRO_CONFIG_INT(MagicTWCloneSkinHammer, MagicTW_clone_skin_hammer, 0, 0, 1,
 	CFGFLAG_CLIENT|CFGFLAG_SAVE, "Copy the skin of the player you hit")
 
+MACRO_CONFIG_INT(MagicTWAutoSpin, MagicTW_auto_spin, 0, 0, 1,
+	CFGFLAG_CLIENT|CFGFLAG_SAVE, "Enable/disable the automatic spin of the player")
+MACRO_CONFIG_INT(MagicTWAutoSpinSpeed, MagicTW_auto_spin_speed, 1, -100, 100,
+	CFGFLAG_CLIENT|CFGFLAG_SAVE, "Define the speed for auto spin (positive or negative number)")
+	
 // server
 MACRO_CONFIG_INT(SvWarmup, sv_warmup, 0, 0, 0, CFGFLAG_SERVER, "Number of seconds to do warmup before round starts")
 MACRO_CONFIG_STR(SvMotd, sv_motd, 900, "", CFGFLAG_SERVER, "Message of the day to display for the clients")

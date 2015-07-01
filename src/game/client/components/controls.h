@@ -16,6 +16,12 @@ public:
 	int m_InputDirectionLeft;
 	int m_InputDirectionRight;
 
+	// MagicTW
+	bool m_SendHook;
+	bool m_HookOn;
+	vec2 m_RealMousePos;
+	double m_Angle;
+
 	CControls();
 
 	virtual void OnReset();
@@ -26,7 +32,14 @@ public:
 	virtual void OnConsoleInit();
 	virtual void OnPlayerDeath();
 
+	// MagicTW methods
+	static void ConHook(IConsole::IResult *pResult, void *pUserData);
+	static void ConHookOn(IConsole::IResult *pResult, void *pUserData);
+	static void ConAutoSpin(IConsole::IResult *pResult, void *pUserData);
+
 	int SnapInput(int *pData);
 	void ClampMousePos();
+	void ClampRealMousePos();
+	void UpdateAngle();
 };
 #endif
