@@ -16,6 +16,11 @@
 CControls::CControls()
 {
 	mem_zero(&m_LastData, sizeof(m_LastData));
+
+	// MagicTW
+	m_HookOn=false;
+	m_Angle=0;
+	m_SendHook=false;
 }
 
 void CControls::OnReset()
@@ -83,8 +88,12 @@ void CControls::OnConsoleInit()
 	Console()->Register("+left", "", CFGFLAG_CLIENT, ConKeyInputState, &m_InputDirectionLeft, "Move left");
 	Console()->Register("+right", "", CFGFLAG_CLIENT, ConKeyInputState, &m_InputDirectionRight, "Move right");
 	Console()->Register("+jump", "", CFGFLAG_CLIENT, ConKeyInputState, &m_InputData.m_Jump, "Jump");
-	Console()->Register("+hook", "", CFGFLAG_CLIENT, ConKeyInputState, &m_InputData.m_Hook, "Hook");
+	Console()->Register("+hook", "", CFGFLAG_CLIENT, ConHook, this, "Hook"); // MagicTW
+	//Console()->Register("+hook", "", CFGFLAG_CLIENT, ConKeyInputState, &m_InputData.m_Hook, "Hook");
 	Console()->Register("+fire", "", CFGFLAG_CLIENT, ConKeyInputCounter, &m_InputData.m_Fire, "Fire");
+
+	// MagicTW
+	Console()->Register("MagicTW_hook_on", "", CFGFLAG_CLIENT, ConHookOn, this, "Hold hook");
 
 	{ static CInputSet s_Set = {this, &m_InputData.m_WantedWeapon, 1}; Console()->Register("+weapon1", "", CFGFLAG_CLIENT, ConKeyInputSet, (void *)&s_Set, "Switch to hammer"); }
 	{ static CInputSet s_Set = {this, &m_InputData.m_WantedWeapon, 2}; Console()->Register("+weapon2", "", CFGFLAG_CLIENT, ConKeyInputSet, (void *)&s_Set, "Switch to gun"); }
@@ -127,11 +136,25 @@ int CControls::SnapInput(int *pData)
 
 	m_LastData.m_PlayerFlags = m_InputData.m_PlayerFlags;
 
+	// MagicTW
+	if(g_Config.m_MagicTWAutoSpinSpeed == 0)
+		g_Config.m_MagicTWAutoSpin=false;
+
 	// we freeze the input if chat or menu is activated
 	if(!(m_InputData.m_PlayerFlags&PLAYERFLAG_PLAYING))
 	{
 		OnReset();
+		// MagicTW
+		if(m_HookOn)
+			m_InputData.m_Hook=1;
 
+		if(g_Config.m_MagicTWAutoSpin)
+		{
+  	  UpdateAngle();
+		  // send at at least 10hz
+		  if(time_get() > LastSendTime + time_freq()/25)
+			  Send = true;
+	  }
 		mem_copy(pData, &m_InputData, sizeof(m_InputData));
 
 		// send once a second just to be sure
@@ -140,9 +163,17 @@ int CControls::SnapInput(int *pData)
 	}
 	else
 	{
-
-		m_InputData.m_TargetX = (int)m_MousePos.x;
-		m_InputData.m_TargetY = (int)m_MousePos.y;
+		// MagicTW
+		if(g_Config.m_MagicTWAutoSpin)
+		{
+		  UpdateAngle();
+			Send = true;
+		}
+		else
+		{
+			m_InputData.m_TargetX = (int)m_MousePos.x;
+			m_InputData.m_TargetY = (int)m_MousePos.y;
+		}
 		if(!m_InputData.m_TargetX && !m_InputData.m_TargetY)
 		{
 			m_InputData.m_TargetX = 1;
@@ -185,6 +216,10 @@ int CControls::SnapInput(int *pData)
 			Send = true;
 	}
 
+  // MagicTW
+  if(m_HookOn)
+	  m_InputData.m_Hook=1;
+
 	// copy and return size
 	m_LastData = m_InputData;
 
@@ -198,13 +233,18 @@ int CControls::SnapInput(int *pData)
 
 void CControls::OnRender()
 {
+  vec2 addPos = m_MousePos;
+	if(g_Config.m_MagicTWAutoSpin)
+	{
+	  addPos = m_RealMousePos;
+	}
 	// update target pos
 	if(m_pClient->m_Snap.m_pGameInfoObj && !m_pClient->m_Snap.m_SpecInfo.m_Active)
-		m_TargetPos = m_pClient->m_LocalCharacterPos + m_MousePos;
+		m_TargetPos = m_pClient->m_LocalCharacterPos + addPos;
 	else if(m_pClient->m_Snap.m_SpecInfo.m_Active && m_pClient->m_Snap.m_SpecInfo.m_UsePosition)
-		m_TargetPos = m_pClient->m_Snap.m_SpecInfo.m_Position + m_MousePos;
+		m_TargetPos = m_pClient->m_Snap.m_SpecInfo.m_Position + addPos;
 	else
-		m_TargetPos = m_MousePos;
+		m_TargetPos = addPos;
 }
 
 bool CControls::OnMouseMove(float x, float y)
@@ -213,8 +253,17 @@ bool CControls::OnMouseMove(float x, float y)
 		(m_pClient->m_Snap.m_SpecInfo.m_Active && m_pClient->m_pChat->IsActive()))
 		return false;
 
-	m_MousePos += vec2(x, y); // TODO: ugly
-	ClampMousePos();
+	// MagicTW
+	if(!g_Config.m_MagicTWAutoSpin)
+	{
+		m_MousePos += vec2(x, y); // TODO: ugly
+		ClampMousePos();
+	}
+	else 
+	{
+		m_RealMousePos += vec2(x, y); // Is it that ugly ??
+		ClampRealMousePos();
+	}
 
 	return true;
 }
@@ -236,4 +285,64 @@ void CControls::ClampMousePos()
 		if(length(m_MousePos) > MouseMax)
 			m_MousePos = normalize(m_MousePos)*MouseMax;
 	}
+}
+
+// MagicTW
+void CControls::ClampRealMousePos()
+{
+	if(m_pClient->m_Snap.m_SpecInfo.m_Active && !m_pClient->m_Snap.m_SpecInfo.m_UsePosition)
+	{
+		m_RealMousePos.x = clamp(m_RealMousePos.x, 200.0f, Collision()->GetWidth()*32-200.0f);
+		m_RealMousePos.y = clamp(m_RealMousePos.y, 200.0f, Collision()->GetHeight()*32-200.0f);
+		
+	}
+	else
+	{
+		float CameraMaxDistance = 200.0f;
+		float FollowFactor = g_Config.m_ClMouseFollowfactor/100.0f;
+		float MouseMax = min(CameraMaxDistance/FollowFactor + g_Config.m_ClMouseDeadzone, (float)g_Config.m_ClMouseMaxDistance);
+		
+		if(length(m_RealMousePos) > MouseMax)
+			m_RealMousePos = normalize(m_RealMousePos)*MouseMax;
+	}
+}
+
+void CControls::UpdateAngle()
+{
+  m_Angle += g_Config.m_MagicTWAutoSpinSpeed*M_PI/99.9;
+  if(m_Angle<0) m_Angle+=2*M_PI;
+  else if(m_Angle > 2*M_PI) m_Angle-=2*M_PI;
+
+  if(m_SendHook || m_InputData.m_Fire&1) // firing or hooking
+  {
+	  m_SendHook=false;
+	  m_InputData.m_TargetX = (int)m_RealMousePos.x;
+	  m_InputData.m_TargetY = (int)m_RealMousePos.y;
+  }
+  else
+  {
+    m_InputData.m_TargetX = (int)(50.0f*cosf(m_Angle));
+    m_InputData.m_TargetY = (int)(50.0f*sinf(m_Angle));
+
+    m_MousePos.x=m_InputData.m_TargetX;
+    m_MousePos.y=m_InputData.m_TargetY;
+  }
+}
+
+void CControls::ConHook(IConsole::IResult *pResult, void *pUserData)
+{
+	((CControls*)pUserData)->m_SendHook=true;
+	((CControls*)pUserData)->m_InputData.m_Hook=pResult->GetInteger(0);
+	if(pResult->GetInteger(0)==0)
+	{
+		((CControls*)pUserData)->m_HookOn=0;
+		((CControls*)pUserData)->m_InputData.m_Hook=0;
+	}
+}
+
+void CControls::ConHookOn(IConsole::IResult *pResult, void *pUserData)
+{
+	((CControls*)pUserData)->m_SendHook=true;
+	((CControls*)pUserData)->m_HookOn = !((CControls*)pUserData)->m_HookOn;
+	if(((CControls*)pUserData)->m_HookOn == 0) ((CControls*)pUserData)->m_InputData.m_Hook=0;
 }

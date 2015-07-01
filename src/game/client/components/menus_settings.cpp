@@ -1041,7 +1041,7 @@ void CMenus::RenderSettings(CUIRect MainView)
 void CMenus::RenderSettingsMagicTW(CUIRect MainView)
 {
 	char version[128];
-	CUIRect Label, Button, MagicTW;
+	CUIRect Label, Button, MagicTW, Bars;
 
 	// Headline - Print current MagicTW version
 	str_format(version, 128, "MagicTW v%s", MAGICTW_VERSION);
@@ -1064,4 +1064,19 @@ void CMenus::RenderSettingsMagicTW(CUIRect MainView)
   {
 	  g_Config.m_MagicTWDisplayNameColor ^= 1;
   }
+  
+	// Auto spin
+	static int s_AutoSpin = g_Config.m_MagicTWAutoSpin;
+	MagicTW.HSplitTop(30.0f, &Button, &MagicTW);
+	if(DoButton_CheckBox(&s_AutoSpin, "Auto-spin", g_Config.m_MagicTWAutoSpin, &Button))
+		g_Config.m_MagicTWAutoSpin ^= 1;
+	MagicTW.HSplitTop(20.0f, &Button, &MagicTW);
+	UI()->DoLabelScaled(&Button, "Speed :", 19.0f, -1);
+	// Speed
+	MagicTW.HSplitTop(24.0f, &Button, &MagicTW);
+	Button.VSplitLeft(50.0f, &Label, &Bars);
+	UI()->DoLabelScaled(&Label, Localize("-100"), 14.0f, -1);
+	Bars.VSplitLeft(300.0f, &Bars, &Label);
+	UI()->DoLabelScaled(&Label, Localize("100"), 14.0f, -1);
+	g_Config.m_MagicTWAutoSpinSpeed=(int)(DoScrollbarH(&g_Config.m_MagicTWAutoSpinSpeed, &Bars, ((g_Config.m_MagicTWAutoSpinSpeed+101)/201.0f))*201.0f)-101;
 }

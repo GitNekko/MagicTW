@@ -3,9 +3,6 @@
 #include <engine/keys.h>
 #include "lineinput.h"
 
-// MagicTW - Debug
-#include <stdio.h>
-
 CLineInput::CLineInput()
 {
 	Clear();
