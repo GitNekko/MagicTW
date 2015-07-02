@@ -61,6 +61,15 @@ MACRO_CONFIG_INT(MagicTWDisplayNameColor, MagicTW_display_name_color, 0, 0, 1,
 MACRO_CONFIG_INT(MagicTWCloneSkinHammer, MagicTW_clone_skin_hammer, 0, 0, 1,
 	CFGFLAG_CLIENT|CFGFLAG_SAVE, "Copy the skin of the player you hit")
 
+MACRO_CONFIG_INT(MagicTWHighlightColor, MagicTW_highlight_color, 0, 0, 1,
+	CFGFLAG_CLIENT|CFGFLAG_SAVE, "Customize the color of highlighted messages")
+MACRO_CONFIG_INT(MagicTWHighlightColorRed, MagicTW_highlight_color_red, 250, 0, 255,
+	CFGFLAG_CLIENT|CFGFLAG_SAVE, "Highlighted messages - quantity of red")
+MACRO_CONFIG_INT(MagicTWHighlightColorGreen, MagicTW_highlight_color_green, 120, 0, 255,
+	CFGFLAG_CLIENT|CFGFLAG_SAVE, "Highlighted messages - quantity of green")
+MACRO_CONFIG_INT(MagicTWHighlightColorBlue, MagicTW_highlight_color_blue, 120, 0, 255,
+	CFGFLAG_CLIENT|CFGFLAG_SAVE, "Highlighted messages - quantity of blue")
+
 MACRO_CONFIG_INT(MagicTWAutoSpin, MagicTW_auto_spin, 0, 0, 1,
 	CFGFLAG_CLIENT|CFGFLAG_SAVE, "Enable/disable the automatic spin of the player")
 MACRO_CONFIG_INT(MagicTWAutoSpinSpeed, MagicTW_auto_spin_speed, 1, -100, 100,

@@ -541,7 +541,15 @@ void CChat::OnRender()
 		if(m_aLines[r].m_ClientID == -1)
 			TextRender()->TextColor(1.0f, 1.0f, 0.5f, Blend); // system
 		else if(m_aLines[r].m_Highlighted)
-			TextRender()->TextColor(1.0f, 0.5f, 0.5f, Blend); // highlighted
+		{
+		  if(g_Config.m_MagicTWHighlightColor)
+		    TextRender()->TextColor(g_Config.m_MagicTWHighlightColorRed/256.0f,
+					g_Config.m_MagicTWHighlightColorGreen/256.0f,
+					g_Config.m_MagicTWHighlightColorBlue/256.0f,
+					Blend); // highlighted
+		  else
+  			TextRender()->TextColor(1.0f, 0.5f, 0.5f, Blend); // highlighted
+		}
 		else if(m_aLines[r].m_Team)
 			TextRender()->TextColor(0.65f, 1.0f, 0.65f, Blend); // team message
 		else
