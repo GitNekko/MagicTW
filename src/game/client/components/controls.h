@@ -5,6 +5,9 @@
 #include <base/vmath.h>
 #include <game/client/component.h>
 
+// MagicTW
+#define MAX_INPUT_SIZE 500
+
 class CControls : public CComponent
 {
 public:
@@ -22,6 +25,13 @@ public:
 	vec2 m_RealMousePos;
 	double m_Angle;
 
+	CNetObj_PlayerInput m_TabInputData[MAX_INPUT_SIZE];
+	bool m_RecordInput;
+	bool m_LoadInput;
+	bool m_RepeatInput;
+	long m_Iter;
+	long m_ArraySize;
+
 	CControls();
 
 	virtual void OnReset();
@@ -36,6 +46,14 @@ public:
 	static void ConHook(IConsole::IResult *pResult, void *pUserData);
 	static void ConHookOn(IConsole::IResult *pResult, void *pUserData);
 	static void ConAutoSpin(IConsole::IResult *pResult, void *pUserData);
+	static void ConRecordInput(IConsole::IResult *pResult, void *pUserData);
+	static void ConSaveInput(IConsole::IResult *pResult, void *pUserData);
+	static void ConLoadInput(IConsole::IResult *pResult, void *pUserData);
+
+	// MagicTW fonctions
+	void SaveInput(const char *s, bool overwrite);
+	int LoadInput(const char *s);
+	void DisplayInputStateInConsole(int i);
 
 	int SnapInput(int *pData);
 	void ClampMousePos();

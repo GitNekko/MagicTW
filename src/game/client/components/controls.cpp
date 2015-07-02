@@ -13,6 +13,10 @@
 
 #include "controls.h"
 
+//MagicTW includes
+#include <string.h>
+#include <stdio.h>
+
 CControls::CControls()
 {
 	mem_zero(&m_LastData, sizeof(m_LastData));
@@ -21,6 +25,12 @@ CControls::CControls()
 	m_HookOn=false;
 	m_Angle=0;
 	m_SendHook=false;
+
+	m_RecordInput=false;
+	m_LoadInput=false;
+	m_RepeatInput=false;
+	m_Iter=0;
+	m_ArraySize=0;
 }
 
 void CControls::OnReset()
@@ -94,6 +104,9 @@ void CControls::OnConsoleInit()
 
 	// MagicTW
 	Console()->Register("MagicTW_hook_on", "", CFGFLAG_CLIENT, ConHookOn, this, "Hold hook");
+	Console()->Register("MagicTW_record_input", "", CFGFLAG_CLIENT, ConRecordInput, this, "Records the keyboard and mouse input");
+	Console()->Register("MagicTW_save_input", "s?i", CFGFLAG_CLIENT, ConSaveInput, this, "Save a recorded input in a file");
+	Console()->Register("MagicTW_load_input", "?s?i", CFGFLAG_CLIENT, ConLoadInput, this, "Load a saved input");
 
 	{ static CInputSet s_Set = {this, &m_InputData.m_WantedWeapon, 1}; Console()->Register("+weapon1", "", CFGFLAG_CLIENT, ConKeyInputSet, (void *)&s_Set, "Switch to hammer"); }
 	{ static CInputSet s_Set = {this, &m_InputData.m_WantedWeapon, 2}; Console()->Register("+weapon2", "", CFGFLAG_CLIENT, ConKeyInputSet, (void *)&s_Set, "Switch to gun"); }
@@ -119,109 +132,165 @@ int CControls::SnapInput(int *pData)
 {
 	static int64 LastSendTime = 0;
 	bool Send = false;
-
-	// update player state
-	if(m_pClient->m_pChat->IsActive())
-		m_InputData.m_PlayerFlags = PLAYERFLAG_CHATTING;
-	else if(m_pClient->m_pMenus->IsActive())
-		m_InputData.m_PlayerFlags = PLAYERFLAG_IN_MENU;
-	else
-		m_InputData.m_PlayerFlags = PLAYERFLAG_PLAYING;
-
-	if(m_pClient->m_pScoreboard->Active())
-		m_InputData.m_PlayerFlags |= PLAYERFLAG_SCOREBOARD;
-
-	if(m_LastData.m_PlayerFlags != m_InputData.m_PlayerFlags)
-		Send = true;
-
-	m_LastData.m_PlayerFlags = m_InputData.m_PlayerFlags;
-
 	// MagicTW
-	if(g_Config.m_MagicTWAutoSpinSpeed == 0)
-		g_Config.m_MagicTWAutoSpin=false;
-
-	// we freeze the input if chat or menu is activated
-	if(!(m_InputData.m_PlayerFlags&PLAYERFLAG_PLAYING))
+	if(m_LoadInput)
 	{
-		OnReset();
-		// MagicTW
-		if(m_HookOn)
-			m_InputData.m_Hook=1;
-
-		if(g_Config.m_MagicTWAutoSpin)
+		if((m_TabInputData+m_Iter)->m_Direction==9)
 		{
-  	  UpdateAngle();
-		  // send at at least 10hz
-		  if(time_get() > LastSendTime + time_freq()/25)
+			Send=false;
+		  // send once a second just to be sure
+		  if(time_get() > LastSendTime + time_freq())
 			  Send = true;
 	  }
-		mem_copy(pData, &m_InputData, sizeof(m_InputData));
-
-		// send once a second just to be sure
-		if(time_get() > LastSendTime + time_freq())
-			Send = true;
-	}
-	else
-	{
-		// MagicTW
-		if(g_Config.m_MagicTWAutoSpin)
-		{
-		  UpdateAngle();
-			Send = true;
-		}
 		else
 		{
-			m_InputData.m_TargetX = (int)m_MousePos.x;
-			m_InputData.m_TargetY = (int)m_MousePos.y;
+			Send=true;
+			mem_copy(&m_InputData, m_TabInputData+m_Iter, sizeof(*(m_TabInputData+m_Iter)));
 		}
+		
+		m_Iter++;
+		if(m_Iter>=m_ArraySize)
+		{
+			if(m_RepeatInput) m_Iter=0;
+			else
+			{
+				m_LoadInput=false;
+				DisplayInputStateInConsole(1);
+			}
+		}
+
 		if(!m_InputData.m_TargetX && !m_InputData.m_TargetY)
 		{
 			m_InputData.m_TargetX = 1;
 			m_MousePos.x = 1;
 		}
 
-		// set direction
-		m_InputData.m_Direction = 0;
-		if(m_InputDirectionLeft && !m_InputDirectionRight)
-			m_InputData.m_Direction = -1;
-		if(!m_InputDirectionLeft && m_InputDirectionRight)
-			m_InputData.m_Direction = 1;
-
-		// stress testing
-		if(g_Config.m_DbgStress)
-		{
-			float t = Client()->LocalTime();
-			mem_zero(&m_InputData, sizeof(m_InputData));
-
-			m_InputData.m_Direction = ((int)t/2)&1;
-			m_InputData.m_Jump = ((int)t);
-			m_InputData.m_Fire = ((int)(t*10));
-			m_InputData.m_Hook = ((int)(t*2))&1;
-			m_InputData.m_WantedWeapon = ((int)t)%NUM_WEAPONS;
-			m_InputData.m_TargetX = (int)(sinf(t*3)*100.0f);
-			m_InputData.m_TargetY = (int)(cosf(t*3)*100.0f);
-		}
-
-		// check if we need to send input
-		if(m_InputData.m_Direction != m_LastData.m_Direction) Send = true;
-		else if(m_InputData.m_Jump != m_LastData.m_Jump) Send = true;
-		else if(m_InputData.m_Fire != m_LastData.m_Fire) Send = true;
-		else if(m_InputData.m_Hook != m_LastData.m_Hook) Send = true;
-		else if(m_InputData.m_WantedWeapon != m_LastData.m_WantedWeapon) Send = true;
-		else if(m_InputData.m_NextWeapon != m_LastData.m_NextWeapon) Send = true;
-		else if(m_InputData.m_PrevWeapon != m_LastData.m_PrevWeapon) Send = true;
-
-		// send at at least 10hz
-		if(time_get() > LastSendTime + time_freq()/25)
-			Send = true;
+		m_RealMousePos.x = m_InputData.m_TargetX;
+		m_RealMousePos.y = m_InputData.m_TargetY;
+		m_MousePos.x = m_InputData.m_TargetX;
+		m_MousePos.y = m_InputData.m_TargetY;
 	}
+	else
+	{
 
+	  // update player state
+	  if(m_pClient->m_pChat->IsActive())
+		  m_InputData.m_PlayerFlags = PLAYERFLAG_CHATTING;
+	  else if(m_pClient->m_pMenus->IsActive())
+		  m_InputData.m_PlayerFlags = PLAYERFLAG_IN_MENU;
+	  else
+		  m_InputData.m_PlayerFlags = PLAYERFLAG_PLAYING;
+
+	  if(m_pClient->m_pScoreboard->Active())
+		  m_InputData.m_PlayerFlags |= PLAYERFLAG_SCOREBOARD;
+
+	  if(m_LastData.m_PlayerFlags != m_InputData.m_PlayerFlags)
+		  Send = true;
+
+	  m_LastData.m_PlayerFlags = m_InputData.m_PlayerFlags;
+
+	  // MagicTW
+	  if(g_Config.m_MagicTWAutoSpinSpeed == 0)
+		  g_Config.m_MagicTWAutoSpin=false;
+
+	  // we freeze the input if chat or menu is activated
+	  if(!(m_InputData.m_PlayerFlags&PLAYERFLAG_PLAYING))
+	  {
+		  OnReset();
+		  // MagicTW
+		  if(m_HookOn)
+			  m_InputData.m_Hook=1;
+
+		  if(g_Config.m_MagicTWAutoSpin)
+		  {
+    	  UpdateAngle();
+		    // send at at least 10hz
+		    if(time_get() > LastSendTime + time_freq()/25)
+			    Send = true;
+	    }
+		  // send once a second just to be sure
+		  else if(time_get() > LastSendTime + time_freq())
+			  Send = true;
+		  mem_copy(pData, &m_InputData, sizeof(m_InputData));
+	  }
+	  else
+	  {
+		  // MagicTW
+		  if(g_Config.m_MagicTWAutoSpin)
+		  {
+		    UpdateAngle();
+			  Send = true;
+		  }
+		  else
+		  {
+			  m_InputData.m_TargetX = (int)m_MousePos.x;
+			  m_InputData.m_TargetY = (int)m_MousePos.y;
+		  }
+		  if(!m_InputData.m_TargetX && !m_InputData.m_TargetY)
+		  {
+			  m_InputData.m_TargetX = 1;
+			  m_MousePos.x = 1;
+		  }
+
+		  // set direction
+		  m_InputData.m_Direction = 0;
+		  if(m_InputDirectionLeft && !m_InputDirectionRight)
+			  m_InputData.m_Direction = -1;
+		  if(!m_InputDirectionLeft && m_InputDirectionRight)
+			  m_InputData.m_Direction = 1;
+
+		  // stress testing
+		  if(g_Config.m_DbgStress)
+		  {
+			  float t = Client()->LocalTime();
+			  mem_zero(&m_InputData, sizeof(m_InputData));
+
+			  m_InputData.m_Direction = ((int)t/2)&1;
+			  m_InputData.m_Jump = ((int)t);
+			  m_InputData.m_Fire = ((int)(t*10));
+			  m_InputData.m_Hook = ((int)(t*2))&1;
+			  m_InputData.m_WantedWeapon = ((int)t)%NUM_WEAPONS;
+			  m_InputData.m_TargetX = (int)(sinf(t*3)*100.0f);
+			  m_InputData.m_TargetY = (int)(cosf(t*3)*100.0f);
+		  }
+
+		  // check if we need to send input
+		  if(m_InputData.m_Direction != m_LastData.m_Direction) Send = true;
+		  else if(m_InputData.m_Jump != m_LastData.m_Jump) Send = true;
+		  else if(m_InputData.m_Fire != m_LastData.m_Fire) Send = true;
+		  else if(m_InputData.m_Hook != m_LastData.m_Hook) Send = true;
+		  else if(m_InputData.m_WantedWeapon != m_LastData.m_WantedWeapon) Send = true;
+		  else if(m_InputData.m_NextWeapon != m_LastData.m_NextWeapon) Send = true;
+		  else if(m_InputData.m_PrevWeapon != m_LastData.m_PrevWeapon) Send = true;
+
+		  // send at at least 10hz
+		  if(time_get() > LastSendTime + time_freq()/25)
+			  Send = true;
+	  }
+  }
   // MagicTW
   if(m_HookOn)
 	  m_InputData.m_Hook=1;
 
 	// copy and return size
 	m_LastData = m_InputData;
+
+	// MagicTW
+	if(m_RecordInput)
+	{
+		if(Send) // send
+			mem_copy(m_TabInputData+m_ArraySize, &m_InputData, sizeof(m_InputData));
+		else // don't send
+			(m_TabInputData+m_ArraySize)->m_Direction=9; // m_Direction usually takes 2 values : -1 and 1
+
+		m_ArraySize++;
+
+		if(m_ArraySize==MAX_INPUT_SIZE)
+		{
+			ConRecordInput(NULL,(void*)this);
+			Console()->ExecuteLine("echo taille max atteinte");
+		}
+	}
 
 	if(!Send)
 		return 0;
@@ -345,4 +414,199 @@ void CControls::ConHookOn(IConsole::IResult *pResult, void *pUserData)
 	((CControls*)pUserData)->m_SendHook=true;
 	((CControls*)pUserData)->m_HookOn = !((CControls*)pUserData)->m_HookOn;
 	if(((CControls*)pUserData)->m_HookOn == 0) ((CControls*)pUserData)->m_InputData.m_Hook=0;
+}
+
+void CControls::ConRecordInput(IConsole::IResult *pResult, void *pUserData)
+{
+	if( !((CControls*)pUserData)->m_RecordInput ) // if non-recording -> set to 0 to overwrite previous record
+	{
+		((CControls*)pUserData)->m_Iter=0;
+		((CControls*)pUserData)->m_ArraySize=0;
+	}
+	((CControls*)pUserData)->m_RecordInput = !((CControls*)pUserData)->m_RecordInput;
+	((CControls*)pUserData)->DisplayInputStateInConsole(0);
+}
+
+void CControls::ConLoadInput(IConsole::IResult *pResult, void *pUserData)
+{
+	((CControls*)pUserData)->m_RepeatInput=false;
+	if(pResult->GetInteger(1)!=0)
+		((CControls*)pUserData)->m_RepeatInput=true;
+
+
+	if(pResult->NumArguments() && pResult->GetString(0)!= NULL && pResult->GetString(0)!='\0') // if non-empty string
+		if(((CControls*)pUserData)->LoadInput(pResult->GetString(0))==-1)return;
+
+	((CControls*)pUserData)->m_LoadInput = !((CControls*)pUserData)->m_LoadInput;
+	((CControls*)pUserData)->m_Iter=0;
+	if(((CControls*)pUserData)->m_ArraySize==0)
+	{
+		((CControls*)pUserData)->Console()->ExecuteLine("echo no input recorded");
+		((CControls*)pUserData)->m_LoadInput=false;
+	}
+	((CControls*)pUserData)->DisplayInputStateInConsole(1);
+}
+
+void CControls::ConSaveInput(IConsole::IResult *pResult, void *pUserData)
+{	
+	bool overwrite=false;
+	if(pResult->GetString(0)== NULL || pResult->GetString(0)=='\0')
+		return;
+
+	if(pResult->NumArguments()==2 && pResult->GetInteger(1)!=0) // overwrite option
+		overwrite=true;
+
+	((CControls*)pUserData)->SaveInput(pResult->GetString(0),overwrite);
+}
+
+void CControls::SaveInput(const char *s, bool overwrite)
+{
+	if(m_ArraySize==0) // no input recorded
+	{
+		Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "MagicTW", "fail to save : no input recorded");
+		return;
+	}
+
+	if (s==NULL || *s=='\0') // bad name
+	{
+		Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "MagicTW", "fail to save : please write the name of the save file");
+		return;
+	}
+
+	FILE *f=NULL;
+	f=fopen(s,"r");
+	if(f!=NULL && !overwrite) // file already exists
+	{
+		fclose(f);
+		Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "MagicTW", "fail to save : this file already exists");
+		return;
+	}
+
+	f=fopen(s,"w+");
+	if(f==NULL) // pbm while creating file
+	{
+		Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "MagicTW", "fail to save : error during file creation");
+		return;
+	}
+
+	int i;
+	fprintf(f,"%ld\n",m_ArraySize);
+	
+	for(i=0;i<m_ArraySize;i++)
+	{
+		if(m_TabInputData[i].m_Direction==9) // if send=false, no need to write anything else
+			fprintf(f,"%d\n",9);
+		else // else, write all
+			fprintf(f,"%d %d %d %d %d %d %d %d %d %d\n",
+				m_TabInputData[i].m_Direction,
+				m_TabInputData[i].m_TargetX,
+				m_TabInputData[i].m_TargetY,
+				m_TabInputData[i].m_Jump,
+				m_TabInputData[i].m_Fire,
+				m_TabInputData[i].m_Hook,
+				m_TabInputData[i].m_PlayerFlags,
+				m_TabInputData[i].m_WantedWeapon,
+				m_TabInputData[i].m_NextWeapon,
+				m_TabInputData[i].m_PrevWeapon);
+	}
+
+	fclose(f);
+}
+
+int CControls::LoadInput(const char *s)
+{
+	if (s==NULL || *s=='\0') // bad name
+	{
+		Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "MagicTW", "fail to load : please write the name of the load file");
+		return -1;
+	}
+
+	FILE *f=NULL;
+	f=fopen(s,"r");
+	if(f==NULL) // file doesn't exist
+	{
+		Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "MagicTW", "fail to load : this file doesn't exist");
+		return -1;
+	}
+
+	fseek(f, 0, SEEK_SET);
+	if(fscanf(f,"%ld",&m_ArraySize)==EOF)Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "MagicTW", "fail to load : corrupted file");
+	m_ArraySize=m_ArraySize>MAX_INPUT_SIZE?MAX_INPUT_SIZE:m_ArraySize; // check limit
+
+	if(m_ArraySize==0) // no input recorded
+	{
+		Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "MagicTW", "fail to load : no input recorded");
+		fclose(f);
+		return -1;
+	}
+
+	int direction,result;
+	for(int i=0;i<m_ArraySize;i++)
+	{
+		result=fscanf(f,"%d",&direction);
+		if(result == 0 || result == EOF)
+		{
+			Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "MagicTW", "fail to load : corrupted file");
+			fclose(f);
+			return -1;
+		}
+		
+		if(direction==9)
+		{
+			m_TabInputData[i].m_Direction=9;
+		}
+		else
+		{
+			m_TabInputData[i].m_Direction=direction;
+
+			result=fscanf(f,"%d %d %d %d %d %d %d %d %d\n",
+				&(m_TabInputData[i].m_TargetX),
+				&(m_TabInputData[i].m_TargetY),
+				&(m_TabInputData[i].m_Jump),
+				&(m_TabInputData[i].m_Fire),
+				&(m_TabInputData[i].m_Hook),
+				&(m_TabInputData[i].m_PlayerFlags),
+				&(m_TabInputData[i].m_WantedWeapon),
+				&(m_TabInputData[i].m_NextWeapon),
+				&(m_TabInputData[i].m_PrevWeapon));
+
+			if(result == 0 || result == EOF)
+			{
+				Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "MagicTW", "fail to load : corrupted file");
+				fclose(f);
+				return -1;
+			}
+		}
+	}
+	
+	fclose(f);
+	return 0;
+}
+
+void CControls::DisplayInputStateInConsole(int i)
+{
+	char s[40],unicode[4];
+	CLineInput::GetUnicode(unicode,"high_voltage");
+	s[0]='\0';
+
+	if(i==0)
+	{
+		str_append(s,"echo MagicTW_record_input ",40);
+		str_append(s,unicode,40);
+		if(m_RecordInput)
+			str_append(s,"ON",40);
+		else
+			str_append(s,"OFF",40);
+	}
+	else
+	{
+		str_append(s,"echo MagicTW_load_input ",40);
+		str_append(s,unicode,40);
+		if(m_LoadInput)
+			str_append(s,"ON",40);
+		else
+			str_append(s,"OFF",40);
+	}
+	str_append(s,unicode,40);
+	Console()->ExecuteLine(s);
 }
