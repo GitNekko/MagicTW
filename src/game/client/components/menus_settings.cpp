@@ -1064,6 +1064,39 @@ void CMenus::RenderSettingsMagicTW(CUIRect MainView)
   {
 	  g_Config.m_MagicTWDisplayNameColor ^= 1;
   }
+
+	// Highlight color
+	static int s_HighlightColor = g_Config.m_MagicTWHighlightColor;
+	MagicTW.HSplitTop(30.0f, &Button, &MagicTW);
+	if(DoButton_CheckBox(&s_HighlightColor, "Customize the color of highlighted messages",
+	  g_Config.m_MagicTWHighlightColor, &Button))
+		g_Config.m_MagicTWHighlightColor ^= 1;
+
+	if(g_Config.m_MagicTWHighlightColor)
+	{
+		MagicTW.HSplitTop(20.0f, &Button, &MagicTW);
+		// Use the defined color
+		TextRender()->TextColor(g_Config.m_MagicTWHighlightColorRed/256.0f, g_Config.m_MagicTWHighlightColorGreen/256.0f, g_Config.m_MagicTWHighlightColorBlue/256.0f, 1);
+		UI()->DoLabelScaled(&Button, "Highlight color", 19.0f, -1);
+		// Use default color (white)
+		TextRender()->TextColor(1.0f, 1.0f, 1.0f, 1);
+		// Red
+		MagicTW.HSplitTop(24.0f, &Button, &MagicTW);
+		Button.VSplitLeft(100.0f, &Label, &Bars);
+		UI()->DoLabelScaled(&Label, Localize("Red"), 14.0f, -1);
+		g_Config.m_MagicTWHighlightColorRed=(int)(DoScrollbarH(&g_Config.m_MagicTWHighlightColorRed, &Bars, ((g_Config.m_MagicTWHighlightColorRed)/256.0f))*256.0f);
+		// Green
+		MagicTW.HSplitTop(24.0f, &Button, &MagicTW);
+		Button.VSplitLeft(100.0f, &Label, &Bars);
+		UI()->DoLabelScaled(&Label, Localize("Green"), 14.0f, -1);
+		g_Config.m_MagicTWHighlightColorGreen=(int)(DoScrollbarH(&g_Config.m_MagicTWHighlightColorGreen, &Bars, ((g_Config.m_MagicTWHighlightColorGreen)/256.0f))*256.0f);
+		// Blue
+		MagicTW.HSplitTop(24.0f, &Button, &MagicTW);
+		Button.VSplitLeft(100.0f, &Label, &Button);
+		UI()->DoLabelScaled(&Label, Localize("Blue"), 14.0f, -1);
+		g_Config.m_MagicTWHighlightColorBlue=(int)(DoScrollbarH(&g_Config.m_MagicTWHighlightColorBlue, &Button, ((g_Config.m_MagicTWHighlightColorBlue)/256.0f))*256.0f);
+
+	}
   
 	// Auto spin
 	static int s_AutoSpin = g_Config.m_MagicTWAutoSpin;
