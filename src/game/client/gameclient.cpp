@@ -205,6 +205,7 @@ void CGameClient::OnConsoleInit()
 	Console()->Register("MagicTW_save_skin", "s", CFGFLAG_CLIENT, ConSaveSkin, this, "Write an executable config file");
 	Console()->Register("MagicTW_clone_skin", "i", CFGFLAG_CLIENT, ConCloneSkin, this, "Copy one player's skin");
 	Console()->Register("MagicTW_clone_skin_nearest", "", CFGFLAG_CLIENT, ConCloneSkinNearest, this, "Copy the nearest player's skin");
+	Console()->Register("MagicTW_clone_emote_nearest", "?i", CFGFLAG_CLIENT, ConCloneEmoteNearest, this, "Copy the nearest player's emoticons");
 
 	for(int i = 0; i < m_All.m_Num; i++)
 		m_All.m_paComponents[i]->m_pClient = this;
@@ -241,6 +242,8 @@ void CGameClient::OnInit()
 	// MagicTW Initializations
 	m_last_hammer_x=0;
 	m_last_hammer_y=0;
+	m_clone_emote=false;
+	m_clone_emote_id=-1;
 
 	// set the language
 	g_Localization.Load(g_Config.m_ClLanguagefile, Storage(), Console());
@@ -544,6 +547,14 @@ void CGameClient::OnMessage(int MsgId, CUnpacker *pUnpacker)
 		// apply
 		m_aClients[pMsg->m_ClientID].m_Emoticon = pMsg->m_Emoticon;
 		m_aClients[pMsg->m_ClientID].m_EmoticonStart = Client()->GameTick();
+
+		// MagicTW
+		if(m_clone_emote && pMsg->m_ClientID==m_clone_emote_id)
+		{
+			CNetMsg_Cl_Emoticon Msg;
+			Msg.m_Emoticon = pMsg->m_Emoticon;
+			m_pClient->SendPackMsg(&Msg, MSGFLAG_VITAL);
+		}
 	}
 	else if(MsgId == NETMSGTYPE_SV_SOUNDGLOBAL)
 	{
@@ -1276,6 +1287,68 @@ void CGameClient::ConCloneSkin(IConsole::IResult *pResult, void *pUserData)
 	Msg.m_ColorFeet = ((CGameClient*)pUserData)->m_aClients[id].m_ColorFeet;
 	((CGameClient*)pUserData)->SendMsgPerso(&Msg);
 	
+}
+
+// Console command to clone the emotes of the nearest player
+void CGameClient::ConCloneEmoteNearest(IConsole::IResult *pResult, void *pUserData)
+{
+	bool previousCloneEmote = ((CGameClient*)pUserData)->m_clone_emote;
+	((CGameClient*)pUserData)->m_clone_emote=true;
+
+	// Interprétation de la commande
+	if(pResult->NumArguments() && pResult->GetInteger(0)==0) // forcé à 0
+	{
+		((CGameClient*)pUserData)->m_clone_emote=false;
+		((CGameClient*)pUserData)->m_clone_emote_id=-1;
+	}
+
+	if(((CGameClient*)pUserData)->m_clone_emote)
+	{
+		int nearest_id=((CGameClient*)pUserData)->GetNearestId(); // joueur le plus proche
+
+		if(nearest_id==-1)
+		{
+			((CGameClient*)pUserData)->m_clone_emote=false;
+			((CGameClient*)pUserData)->m_clone_emote_id=-1;
+		}
+
+		if(((CGameClient*)pUserData)->m_clone_emote==true)
+		{
+			if(nearest_id==((CGameClient*)pUserData)->m_clone_emote_id)
+			{
+				((CGameClient*)pUserData)->m_clone_emote=false;
+				((CGameClient*)pUserData)->m_clone_emote_id=-1;
+			}
+			else
+				((CGameClient*)pUserData)->m_clone_emote_id=nearest_id;
+		}
+	}
+
+	// Affichage des infos dans la console
+	if( previousCloneEmote || ((CGameClient*)pUserData)->m_clone_emote )
+	{
+		char s[MAX_NAME_LENGTH + 50],unicode[4];
+		CLineInput::GetUnicode(unicode,"high_voltage");
+		s[0]='\0';
+
+		str_append(s,"echo MagicTW_clone_emote ",MAX_NAME_LENGTH + 50);
+		str_append(s,unicode,MAX_NAME_LENGTH + 50);
+
+		if(((CGameClient*)pUserData)->m_clone_emote)
+			str_append(s,"ON",MAX_NAME_LENGTH + 50);
+		else
+			str_append(s,"OFF",MAX_NAME_LENGTH + 50);
+
+		str_append(s,unicode,MAX_NAME_LENGTH + 50);
+		if(((CGameClient*)pUserData)->m_clone_emote)
+		{
+			char playerName[MAX_NAME_LENGTH + 12];
+			str_format(playerName,MAX_NAME_LENGTH + 12," : copying %s",
+			  ((CGameClient*)pUserData)->m_aClients[((CGameClient*)pUserData)->m_clone_emote_id].m_aName);
+			str_append(s,playerName,MAX_NAME_LENGTH + 50);
+		}
+		((CGameClient*)pUserData)->Console()->ExecuteLine(s);
+	}
 }
 
 // Console command to clone the nearest player's skin

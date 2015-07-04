@@ -71,6 +71,7 @@ class CGameClient : public IGameClient
 	static void ConSaveSkin(IConsole::IResult *pResult, void *pUserData);
 	static void ConCloneSkin(IConsole::IResult *pResult, void *pUserData);
 	static void ConCloneSkinNearest(IConsole::IResult *pResult, void *pUserData);
+	static void ConCloneEmoteNearest(IConsole::IResult *pResult, void *pUserData);
 	static void ConDisplayNameColor(IConsole::IResult *pResult, void *pUserData);
 	void SendMsgPerso(CNetMsg_Cl_ChangeInfo *Msg);
 	void CloneSkinNearest();
@@ -112,6 +113,9 @@ public:
 	bool m_clone_skin_hammer_updated;
 	int m_last_hammer_x;
 	int m_last_hammer_y;
+	// Emote cloner
+	bool m_clone_emote;
+	int m_clone_emote_id;
 
 	// MagicTW public methods
 	float GetRealTextWidth(const char *pName, int fontSizeOption=0);
