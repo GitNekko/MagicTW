@@ -16,6 +16,10 @@
 //MagicTW includes
 #include <string.h>
 #include <stdio.h>
+#if defined(CONF_FAMILY_WINDOWS)
+	#define _USE_MATH_DEFINES
+	#include <math.h>
+#endif
 
 CControls::CControls()
 {
