@@ -197,7 +197,7 @@ int CControls::SnapInput(int *pData)
 	  // MagicTW
 	  if(g_Config.m_MagicTWAutoSpinSpeed == 0)
 		  g_Config.m_MagicTWAutoSpin=false;
-		int64 diffTime = time_get() - LastDanceUpdateTime;
+		float diffTime = (int)(time_get() - LastDanceUpdateTime)/(float)time_freq();
 		LastDanceUpdateTime = time_get();
     if(m_Dancing)
     {
@@ -450,7 +450,7 @@ unsigned char CControls::UpdateAngleDance(float const& p_time)
   static const float pi2_6 = pi2/6.0f; // 2*PI/6
   static const float pi10_6 = 5*pi2_6; // 10*PI/6
   // Static variables
-  static float speed = 0.00024f;
+  static float speed = 280.0f;
   static bool left = false;
   static float angle = pi2_6;
 
