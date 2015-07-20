@@ -203,7 +203,6 @@ int CControls::SnapInput(int *pData)
     {
       if(m_ChangeDanceStatus)
       {
-        printf("--%lld-%f\n", time_freq(), diffTime);
         m_ChangeDanceStatus = false;
         // If hook is activated, disable it
         if(!m_HookOn && m_InputData.m_Hook == 0)
@@ -451,7 +450,6 @@ unsigned char CControls::UpdateAngleDance(float const& p_time)
   static const float pi2_6 = pi2/6.0f; // 2*PI/6
   static const float pi10_6 = 5*pi2_6; // 10*PI/6
   // Static variables
-  //static float speed = 0.00024f;
   static float speed = 280.0f;
   static bool left = false;
   static float angle = pi2_6;
