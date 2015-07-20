@@ -101,3 +101,7 @@ Features:
 **Update for teeworlds 0.6.3**  
 All features of version 1.7 are available.
 
+#### Version 1.9 (_20/07/15_)
+Features:
+ * New console command: `MagicTW_dance` -> Show your dance skills
+
