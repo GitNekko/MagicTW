@@ -24,6 +24,8 @@ public:
 	bool m_HookOn;
 	vec2 m_RealMousePos;
 	double m_Angle;
+	bool m_Dancing;
+	bool m_ChangeDanceStatus;
 
 	CNetObj_PlayerInput m_TabInputData[MAX_INPUT_SIZE];
 	bool m_RecordInput;
@@ -46,6 +48,7 @@ public:
 	static void ConHook(IConsole::IResult *pResult, void *pUserData);
 	static void ConHookOn(IConsole::IResult *pResult, void *pUserData);
 	static void ConAutoSpin(IConsole::IResult *pResult, void *pUserData);
+	static void ConDance(IConsole::IResult *pResult, void *pUserData);
 	static void ConRecordInput(IConsole::IResult *pResult, void *pUserData);
 	static void ConSaveInput(IConsole::IResult *pResult, void *pUserData);
 	static void ConLoadInput(IConsole::IResult *pResult, void *pUserData);
@@ -58,6 +61,7 @@ public:
 	int SnapInput(int *pData);
 	void ClampMousePos();
 	void ClampRealMousePos();
-	void UpdateAngle();
+	void UpdateAngleSpin();
+	unsigned char UpdateAngleDance(float const& p_time);
 };
 #endif

@@ -11,7 +11,7 @@
 #include "render.h"
 
 // MagicTW
-#define MAGICTW_VERSION "1.8"
+#define MAGICTW_VERSION "1.9"
 
 class CTextCursor; // MagicTW
 

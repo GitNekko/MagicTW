@@ -111,6 +111,7 @@ void CControls::OnConsoleInit()
 	Console()->Register("MagicTW_record_input", "", CFGFLAG_CLIENT, ConRecordInput, this, "Records the keyboard and mouse input");
 	Console()->Register("MagicTW_save_input", "s?i", CFGFLAG_CLIENT, ConSaveInput, this, "Save a recorded input in a file");
 	Console()->Register("MagicTW_load_input", "?s?i", CFGFLAG_CLIENT, ConLoadInput, this, "Load a saved input");
+	Console()->Register("MagicTW_dance", "?i", CFGFLAG_CLIENT, ConDance, this, "Show your dance skills");
 
 	{ static CInputSet s_Set = {this, &m_InputData.m_WantedWeapon, 1}; Console()->Register("+weapon1", "", CFGFLAG_CLIENT, ConKeyInputSet, (void *)&s_Set, "Switch to hammer"); }
 	{ static CInputSet s_Set = {this, &m_InputData.m_WantedWeapon, 2}; Console()->Register("+weapon2", "", CFGFLAG_CLIENT, ConKeyInputSet, (void *)&s_Set, "Switch to gun"); }
@@ -135,6 +136,7 @@ void CControls::OnMessage(int Msg, void *pRawMsg)
 int CControls::SnapInput(int *pData)
 {
 	static int64 LastSendTime = 0;
+	static int64 LastDanceUpdateTime = 0;
 	bool Send = false;
 	// MagicTW
 	if(m_LoadInput)
@@ -176,7 +178,6 @@ int CControls::SnapInput(int *pData)
 	}
 	else
 	{
-
 	  // update player state
 	  if(m_pClient->m_pChat->IsActive())
 		  m_InputData.m_PlayerFlags = PLAYERFLAG_CHATTING;
@@ -196,6 +197,44 @@ int CControls::SnapInput(int *pData)
 	  // MagicTW
 	  if(g_Config.m_MagicTWAutoSpinSpeed == 0)
 		  g_Config.m_MagicTWAutoSpin=false;
+		int64 diffTime = time_get() - LastDanceUpdateTime;
+		LastDanceUpdateTime = time_get();
+    if(m_Dancing)
+    {
+      if(m_ChangeDanceStatus)
+      {
+        m_ChangeDanceStatus = false;
+        // If hook is activated, disable it
+        if(!m_HookOn && m_InputData.m_Hook == 0)
+        {
+          m_HookOn = true;
+          // Look downward to hook the ground
+          m_InputData.m_TargetX = 0.0f;
+          m_InputData.m_TargetY = 10.0f;
+        }
+      }
+      else
+      {
+    	  unsigned char cmd = UpdateAngleDance(diffTime);
+    	  // Handle dance instructions
+        m_InputData.m_Jump = cmd & 1;
+        // Enable jump even when menu is activated
+        if(m_InputData.m_Jump && m_pClient->m_pMenus->IsActive())
+    		  m_InputData.m_PlayerFlags = PLAYERFLAG_PLAYING;
+      }
+    }
+    else
+    {
+      if(m_ChangeDanceStatus)
+      {
+        m_InputData.m_Hook = 0;
+        m_ChangeDanceStatus = false;
+      }
+      if(g_Config.m_MagicTWAutoSpin)
+      {
+    	  UpdateAngleSpin();
+      }
+    }
 
 	  // we freeze the input if chat or menu is activated
 	  if(!(m_InputData.m_PlayerFlags&PLAYERFLAG_PLAYING))
@@ -204,14 +243,11 @@ int CControls::SnapInput(int *pData)
 		  // MagicTW
 		  if(m_HookOn)
 			  m_InputData.m_Hook=1;
-
-		  if(g_Config.m_MagicTWAutoSpin)
-		  {
-    	  UpdateAngle();
-		    // send at at least 10hz
-		    if(time_get() > LastSendTime + time_freq()/25)
+      if(m_Dancing || g_Config.m_MagicTWAutoSpin)
+      {
+		    if(diffTime > time_freq()/25)
 			    Send = true;
-	    }
+      }
 		  // send once a second just to be sure
 		  else if(time_get() > LastSendTime + time_freq())
 			  Send = true;
@@ -220,11 +256,12 @@ int CControls::SnapInput(int *pData)
 	  else
 	  {
 		  // MagicTW
-		  if(g_Config.m_MagicTWAutoSpin)
-		  {
-		    UpdateAngle();
-			  Send = true;
-		  }
+      if(m_Dancing || g_Config.m_MagicTWAutoSpin)
+      {
+        // Do not spam server if nothing else has changed
+		    if(diffTime > time_freq()/60)
+			    Send = true;
+      }
 		  else
 		  {
 			  m_InputData.m_TargetX = (int)m_MousePos.x;
@@ -292,7 +329,7 @@ int CControls::SnapInput(int *pData)
 		if(m_ArraySize==MAX_INPUT_SIZE)
 		{
 			ConRecordInput(NULL,(void*)this);
-			Console()->ExecuteLine("echo taille max atteinte");
+			Console()->ExecuteLine("echo maximum size reached");
 		}
 	}
 
@@ -307,7 +344,7 @@ int CControls::SnapInput(int *pData)
 void CControls::OnRender()
 {
   vec2 addPos = m_MousePos;
-	if(g_Config.m_MagicTWAutoSpin)
+	if(g_Config.m_MagicTWAutoSpin || m_Dancing)
 	{
 	  addPos = m_RealMousePos;
 	}
@@ -327,17 +364,16 @@ bool CControls::OnMouseMove(float x, float y)
 		return false;
 
 	// MagicTW
-	if(!g_Config.m_MagicTWAutoSpin)
+	if(g_Config.m_MagicTWAutoSpin || m_Dancing)
 	{
-		m_MousePos += vec2(x, y); // TODO: ugly
-		ClampMousePos();
-	}
-	else 
-	{
-		m_RealMousePos += vec2(x, y); // Is it that ugly ??
+		m_RealMousePos += vec2(x, y);
 		ClampRealMousePos();
 	}
-
+	else
+	{
+		m_MousePos += vec2(x, y);
+		ClampMousePos();
+	}
 	return true;
 }
 
@@ -361,13 +397,13 @@ void CControls::ClampMousePos()
 }
 
 // MagicTW
+// FIXME: Refactoring with previous method
 void CControls::ClampRealMousePos()
 {
 	if(m_pClient->m_Snap.m_SpecInfo.m_Active && !m_pClient->m_Snap.m_SpecInfo.m_UsePosition)
 	{
 		m_RealMousePos.x = clamp(m_RealMousePos.x, 200.0f, Collision()->GetWidth()*32-200.0f);
 		m_RealMousePos.y = clamp(m_RealMousePos.y, 200.0f, Collision()->GetHeight()*32-200.0f);
-		
 	}
 	else
 	{
@@ -380,8 +416,10 @@ void CControls::ClampRealMousePos()
 	}
 }
 
-void CControls::UpdateAngle()
+void CControls::UpdateAngleSpin()
 {
+  static const float pi = M_PI; // PI
+  static const float pi2 = 2*pi; // 2*PI
   m_Angle += g_Config.m_MagicTWAutoSpinSpeed*M_PI/99.9;
   if(m_Angle<0) m_Angle+=2*M_PI;
   else if(m_Angle > 2*M_PI) m_Angle-=2*M_PI;
@@ -399,6 +437,77 @@ void CControls::UpdateAngle()
 
     m_MousePos.x=m_InputData.m_TargetX;
     m_MousePos.y=m_InputData.m_TargetY;
+  }
+}
+
+unsigned char CControls::UpdateAngleDance(float const& p_time)
+{
+  unsigned char cmd = 0; // Return value
+  // Define some math constants
+  static const float pi = M_PI; // PI
+  static const float pi2 = 2*M_PI; // PI
+  static const float pi_2 = pi/2.0f; // PI/2
+  static const float pi2_6 = pi2/6.0f; // 2*PI/6
+  static const float pi10_6 = 5*pi2_6; // 10*PI/6
+  // Static variables
+  static float speed = 0.00024f;
+  static bool left = false;
+  static float angle = pi2_6;
+
+  // Update main angle (0->PI)
+  angle += speed*p_time*M_PI/99.9;
+  if(angle < pi2_6)
+  {
+    angle = pi2_6;
+    speed *= -1;
+  }
+  else if(angle > pi10_6)
+  {
+    angle = pi10_6;
+    speed *= -1;
+  }
+  // Update jump instruction
+  if((left && angle > pi) || (!left && angle < pi))
+  {
+    left = 1-left; // Toggle boolean
+    cmd = cmd | 1; // Jump instruction
+  }
+
+  if(m_SendHook || m_InputData.m_Fire&1) // firing or hooking
+  {
+	  m_SendHook=false;
+	  m_InputData.m_TargetX = (int)m_RealMousePos.x;
+	  m_InputData.m_TargetY = (int)m_RealMousePos.y;
+  }
+  else
+  {
+    m_InputData.m_TargetX = (int)(50.0f*cosf(angle-pi_2));
+    m_InputData.m_TargetY = (int)(50.0f*sinf(angle-pi_2));
+    m_MousePos.x = m_InputData.m_TargetX;
+    m_MousePos.y = m_InputData.m_TargetY;
+  }
+  return cmd;
+}
+
+void CControls::ConDance(IConsole::IResult *pResult, void *pUserData)
+{
+  if(pResult->NumArguments() == 0)
+  {
+	  ((CControls*)pUserData)->m_Dancing ^= 1; // Toggle dance state
+  }
+  else
+  {
+  	((CControls*)pUserData)->m_Dancing = pResult->GetInteger(0); // Set or clear
+	}
+
+	if(((CControls*)pUserData)->m_Dancing)
+	{
+    ((CControls*)pUserData)->m_ChangeDanceStatus = true;
+  }
+  else if(((CControls*)pUserData)->m_HookOn)
+  {
+    ((CControls*)pUserData)->m_HookOn = false;
+    ((CControls*)pUserData)->m_ChangeDanceStatus = true;
   }
 }
 
@@ -582,7 +691,6 @@ int CControls::LoadInput(const char *s)
 			}
 		}
 	}
-	
 	fclose(f);
 	return 0;
 }
